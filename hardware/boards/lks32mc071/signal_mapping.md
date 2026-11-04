@@ -1,15 +1,45 @@
-# 功率板信号映射
+# LKS_EVB_MVPOWPRE_V5.0 跨板信号映射（原理图审计）
 
-| 功能 | 功率板网络 | MCU 信号 | 电气范围 | 方向/极性 | 证据 | 状态 |
-|---|---|---|---|---|---|---|
-| U 相 BEMF | TBD | TBD | TBD | TBD | TBD | TBD |
-| V 相 BEMF | TBD | TBD | TBD | TBD | TBD | TBD |
-| W 相 BEMF | TBD | TBD | TBD | TBD | TBD | TBD |
-| Virtual Neutral / Reference | TBD | TBD | TBD | TBD | TBD | TBD |
-| Current Sense | TBD | TBD | TBD | TBD | TBD | TBD |
-| DC Bus Sense | TBD | TBD | TBD | TBD | TBD | TBD |
-| Temperature | TBD | TBD | TBD | TBD | TBD | TBD |
-| Driver Enable | TBD | TBD | TBD | TBD | TBD | TBD |
-| Driver Fault / OC | TBD | TBD | TBD | TBD | TBD | TBD |
+依据：功率板 LKS_EVB_MVPOWPRE_V5.0.PDF 与控制板 LKS_EVB_MCU071CBT8_V1.0.PDF，第 1 页。状态：仅原理图确认，未进行电气测试。
 
-必须记录分压、限流、钳位、滤波和隔离器件，不能只记录 MCU 引脚。
+## 1. 三相功率桥
+
+- 控制核心板 UP/UN -> P1-22/7 -> 功率板 U_P/U_N -> LKS560（U1）HIN/LIN -> NCE8259AK U 相高低侧。
+- 控制核心板 VP/VN -> P1-21/6 -> 功率板 V_P/V_N -> LKS560（U2）HIN/LIN -> NCE8259AK V 相高低侧。
+- 控制核心板 WP/WN -> P1-20/5 -> 功率板 W_P/W_N -> LKS560（U5）HIN/LIN -> NCE8259AK W 相高低侧。
+
+原理图使用 +48V、+15V、+5V 电源网络名称；+48V 不是本电机已确认额定电压。目前可用限流电源最高 32V。实际可用电压须核对所有器件及 15V/5V 辅助供电链路。
+
+## 2. 三相 BEMF 分压及 ADC
+
+| 电机相端 | 功率板串联电阻 | 功率板输出 | 核心板到地网络 | MCU 输入 |
+|---|---|---|---|---|
+| UX | R1=20k、R55=20k | PU | R18=1k、C4=1nF | P0.13 / ADC1_CH13 |
+| VX | R2=20k、R59=20k | PV | R19=1k、C5=1nF | P0.12 / ADC1_CH12 |
+| WX | R3=20k、R61=20k | PW | R20=1k、C6=1nF | P0.11 / ADC1_CH11 |
+
+简化静态比例推算：1k/(20k+20k+1k) = 1/41；假设功率相端对系统地为 32V，则 MCU 端约 0.78V。实际系数、漏电、采样输入阻抗与瞬态钳位情况未验证，不能据此宣称输入足够安全。
+
+BEMF 需要正确的中性点参考或等效比较阈值；三相分别下拉到 GND 并不直接生成虚拟中性点。选择 ADC 同步采样、软件参考或 CMP 检测前须结合 PWM 开关时段、续流和去磁情况。
+
+## 3. 低侧电流采样
+
+功率板低侧各有 0.005Ω/2512 采样电阻：R15（U）、R16（V）、R17（W）。
+
+与核心板对应的采样输入为：
+- UP- -> OPA2_IP / PGND -> OPA2_IN
+- VP- -> OPA1_IP / PGND -> OPA1_IN
+- WP- -> OPA0_IP / PGND -> OPA0_IN
+
+另外图纸还存在 R69=0.005Ω 以及 P5/P6/P7 三组采样选择插针；它们的实际装配和接法未核实，不能立即判定现板使用单电阻、三电阻或 MOSFET 导通电阻采样方案。
+
+## 4. 母线采样
+
+功率板 DM_In -> R74=20k + R75=20k -> Vol_ADC；核心板 Vol_ADC 下拉 R23=1k，C8=100nF 到地；MCU P2.9（脚 37）。简化静态比例约 1/41，实物待校准。
+
+## 5. 未解决事项
+
+- P2 针脚 5：控制板 P2.3、功率板 P2.2；针脚 18：控制板 P2.2、功率板 P2.1。需断电核对。
+- 核心板 OC -> MCU P2.1 / CMP1_IP0，但当前未确认功率板 OC 网络来源与逐波关断硬件链。
+- 功率板未确认专用外部 NTC 温度输入。
+- 功率板包含 LKS620、LM7805 电源器件；使用 32V DC 时仍要验证输出 +15V、+5V、静态电流、驱动器欠压行为。供电电路标注非隔离，不允许在未确认隔离边界时直接进行市电测试。
