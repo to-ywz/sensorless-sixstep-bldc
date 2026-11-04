@@ -1,31 +1,32 @@
-# 硬件保护链路审计
+# 硬件保护链路：V0.0 首轮审计
 
-## 逐波过流目标链路
+依据：LKS_EVB_MCU071CBT8_V1.0.PDF、LKS_EVB_MVPOWPRE_V5.0.PDF，第 1 页。以下仅为原理图分析，未经实测。
 
-~~~text
-Current Sense
-   -> Amplifier / Filter
-   -> Comparator (CMP or driver OCP)
-   -> PWM Break / Gate Driver Disable
-   -> Power MOSFET gate output forced safe
-   -> Fault status captured by MCU
-~~~
+## 已经确定
 
-上图是待验证的目标链路，不代表当前板卡已经按此连接。
+- 功率板 U/V/W 低侧有 R15/R16/R17（各 0.005Ω/2512）采样电阻。
+- 核心板 OPA2、OPA1、OPA0 输入分别连接 UP-、VP-、WP- 相关采样信号及 PGND。
+- MCU 核心板的 OC 线连接 P2.1（封装脚 41，复用 CMP1_IP0）。
+- MCU 同时具备 MCPWM_BKIN0 / MCPWM_BKIN1 等相关外设复用能力，但这不证明从现有采样点到 PWM Break 已形成硬件路径。
+- 从现有功率板图纸尚未确认 P2-4 的 OC 网络由哪个器件主动驱动。
 
-| 环节 | 实际器件/网络 | 阈值/极性 | 响应时间 | 证据 | 状态 |
-|---|---|---|---|---|---|
-| Current Sense | TBD | TBD | TBD | TBD | TBD |
-| Comparator | TBD | TBD | TBD | TBD | TBD |
-| PWM Break / Driver Disable | TBD | TBD | TBD | TBD | TBD |
-| Fault latch / clear | TBD | TBD | TBD | TBD | TBD |
+## 待证明的逐波限流硬件路径
 
-## 必须回答
-1. 比较器是否能不经过软件中断直接关断 PWM？
-2. 关断覆盖所有桥臂吗？
-3. 故障是逐周期自动恢复还是锁存？
-4. MCU 复位或失控时，驱动器默认处于什么状态？
-5. 硬件阈值是否低于功率器件和采样电路的安全上限？
-6. 过压时是否存在母线能量吸收路径？
+电流采样电阻 -> 合适的信号调理 -> 比较器与阈值 -> MCPWM 硬件 Break 或驱动器专用 OCP -> Gate 安全关断。
 
-完成电路核对后，必须进行限流条件下的受控验证。
+软件 ADC 中断中检测到超限后关闭 PWM，不等价于硬件逐波关断。
+
+必须核对的项目：
+
+1. 实物电流采样电阻、P5/P6/P7 跳线和 R69 是否焊接及选通。
+2. OPA 的实际增益、偏置、内部 ADC/CMP 路由，或驱动器的 OCP 来源。
+3. 比较器硬件输出如何进入 MCPWM Break（若存在）以及作用于哪些通道。
+4. 各类 PWM 输出在关断时的极性、安全状态、锁存/逐周期恢复条件。
+5. 低能量逻辑级受控注入测得的真实 Gate 关断延迟。
+6. 过流阈值与 MOSFET、Shunt 和供电能力的匹配。
+
+## 安全门槛
+
+**目前逐波过流功能状态是 UNVERIFIED，不是 TESTED。**
+
+在确认硬件快速关断路径、驱动安全默认态和输入电源保护前，不开展 FN550-90K 高速或高电流带载试验。禁止用直接短接电源或三相端子的方式测试保护。
