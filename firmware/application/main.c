@@ -6,6 +6,7 @@
  * This program intentionally does not configure or enable MCPWM.
  */
 #include <stdint.h>
+#include "lks32mc07x_lib.h"
 #include "board_init.h"
 
 /**
