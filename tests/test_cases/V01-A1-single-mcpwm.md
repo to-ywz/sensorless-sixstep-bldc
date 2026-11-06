@@ -7,12 +7,12 @@
 ## 启用方式（默认关闭）
 
 1. Keil 主目标使用 `Linko 07x Project`（不是 `_ac6`）。
-2. 将 `firmware/tests/bench/test_mcpwm_single.c` 添加到 Keil 项目；添加头文件路径 `firmware/tests/bench`（相对于 uvprojx：`..\..\..\tests\bench`）。
-3. 在 Keil **Options for Target → C/C++ → Define** 添加 `BENCH_TEST_MCPWM_SINGLE`；未定义该宏时固件仍为 A0 心跳程序。
+2. 主目标的 Keil `LK_StdPeriph.uvprojx` **已经引用** `firmware/tests/bench/test_mcpwm_single.c`，并新增了 Include Path `..\..\..\tests\bench`。拉取最新提交后先 Rebuild All，确认默认 A0 模式依然能编译。不要把该源文件重复加入工程。
+3. 在 Keil **Options for Target → C/C++ → Define** 中添加 `BENCH_TEST_MCPWM_SINGLE`（编译器宏，**默认没有开启**）；未定义该宏时固件仍为 A0 心跳程序。
 4. Rebuild All，确认编译 0 Error；如有 warning 保存全文。
 5. 保证外部主功率级没有电源且电机断开；只给控制板安全逻辑电源。
 6. 示波器 CH1：P1.4 对已确认的逻辑 GND。触发设置为上升沿，测量 PWM 频率、占空比、脉冲高电平宽度。
-7. 同时观察 P1.5、P1.6～P1.9 是否始终为低；测试软件停止和重新启动时的毛刺。
+7. 程序当前会在 PWM 启用与关闭状态之间周期性交替（间隔为非校准的软件延时），方便观察启停时是否出现毛刺。同时观察 P1.5～P1.9 是否始终为低。
 8. 删除 Define `BENCH_TEST_MCPWM_SINGLE` 并重新编译可恢复 A0。
 
 ## 预期值（必须以测量为准）
