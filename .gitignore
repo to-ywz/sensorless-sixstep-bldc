@@ -1,0 +1,35 @@
+# Keil MDK: local UI/device/debug state (never source)
+**/*.uvoptx
+**/*.uvguix
+**/*.uvguix.*
+**/JLinkSettings.ini
+**/mapinit.ini
+**/*.uvmpw
+**/*.bak
+
+# Keil/ARM compiler generated output
+**/Objects/
+**/Listings/
+**/*.axf
+**/*.hex
+**/*.bin
+**/*.elf
+**/*.o
+**/*.obj
+**/*.d
+**/*.dep
+**/*.crf
+**/*.lnp
+**/*.map
+
+# Local third-party SDK mirrors (review licensing and pinned version before publishing)
+third_party/
+
+# Temporary work files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
