@@ -32,15 +32,14 @@ int main(void)
 #if defined(BENCH_TEST_MCPWM_SINGLE)
     /*
      * A1 mode is only for MCU logic-pin observation with the
-     * external inverter unpowered and FN550-90K disconnected.
+     * inverter power stage unpowered and FN550-90K disconnected.
      */
     bench_mcpwm_single_init();
 
     for (;;) {
-        bench_mcpwm_single_enable();
-        bench_delay(4000000u);
-        bench_mcpwm_single_disable();
-        bench_delay(4000000u);
+        bench_mcpwm_single_poll();
+        /* Approximate scan interval; debounce count is verified on bench. */
+        bench_delay(12000u);
     }
 #else
     /* Validated A0 program remains the default. */
