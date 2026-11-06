@@ -1,6 +1,6 @@
 # V01-A0 — 最小 BSP / 控制板安全态验收
 
-- Status: **USER-REPORTED BUILD PASS / BUILD LOG PENDING / HARDWARE NOT TESTED**
+- Status: **USER-REPORTED A0 CHECKLIST 8/8 COMPLETE / EVIDENCE NOT ARCHIVED**
 - Target: LKS_EVB_MCU071CBT8_V1.0
 - GitHub 提交版本：8fef844a（Keil 工程加入；用户随后口头确认已成功编译）
 - Keil 主目标：Linko 07x Project（MCU：LKS32MC071CBT8）；不要选用尚未核实 Include Path 的 Linko 07x Project_ac6。
@@ -31,6 +31,25 @@
 - [ ] P1.4、P1.5、P1.6、P1.7、P1.8、P1.9 均测得低电平。
 - [ ] 上电和复位期间六路信号状态另行记录，不默认认定安全。
 - [ ] MCPWM 输出功能未打开；无非预期高脉冲。
+
+## 2026-11-07 用户 A0 实测反馈
+
+用户在对话中明确报告本轮 **8/8 验收操作完成**，结果如下：
+
+| ID | 验证项 | 本轮反馈 |
+|---|---|---|
+| A0-01 | Linko 07x Project, Rebuild All, 0 Error | 已完成并报告 0 Error |
+| A0-02 | main.c、board_init.c、system_startup.c 均参与编译 | 已确认 |
+| A0-03 | 本次 HEX 修改时间对应当前构建 | 已确认 |
+| A0-04 | 电机未连接、主功率母线未供电，安全逻辑供电 | 已完成 |
+| A0-05 | SWD 连接/复位/单步 | 已确认正常 |
+| A0-06 | P0.6 周期翻转 | 已测得 |
+| A0-07 | P1.4～P1.9 静态均为低电平 | 已测得 |
+| A0-08 | 检查上电/复位期间六路是否有异常高脉冲 | 已执行检查，**用户尚未明确提供“无异常高脉冲”这一检查结论或示波器截图** |
+
+结论：**A0 功能与实测进度达到用户报告的 8/8；形式化关闭尚缺 A0-08 检查结果文本与测量证据归档。** 本轮不重复要求前七项。若 A0-08 实际观察到任何异常高电平，先回到 A0 修复，不放行 A1。若无异常，允许在纯逻辑、主功率桥断电状态下开始 A1 单路 MCPWM 实验。
+
+用户当前本地编译及烧录成功不等于开发环境已自动编译本仓库，也不等于功率桥保护已得到验证。
 
 ## C. 测试报告
 
