@@ -1,6 +1,6 @@
 # Firmware · V0.1-A0 最小 BSP
 
-状态：**IMPLEMENTED / BUILD NOT VERIFIED / HARDWARE NOT TESTED**。此阶段仅验证控制板基础运行，**电机和功率桥必须断开，禁止母线供电**。
+状态：**USER-REPORTED BUILD PASS / BUILD LOG PENDING / HARDWARE NOT TESTED**。此阶段仅验证控制板基础运行，**电机和功率桥必须断开，禁止母线供电**。
 
 ## 组织架构
 
@@ -9,13 +9,31 @@
 - `platform/lks32mc071/system_startup.c`：官方启动文件调用的 `SystemInit()`，在 C 运行时初始化前不切换时钟。
 - 后续 motor/{core,startup,commutation,bemf,estimator,control,protection} 各模块按实际测试进度启用，不一次性集成。
 
-## SDK / 示例工程依赖（不上传第三方源码）
+## SDK / 示例工程依赖与当前提交状态
 
 已检查用户此前提供的两份原厂 ZIP：
 - `lks32mc07x_periph_driver_v3.16.zip`
 - `lks32mc07x_demo_prj_v1.9.zip`
 
 选择官方 **014_GPIO** Keil 工程作为本地工程容器（不要直接修改原厂样例，先另存副本），继续使用它的 Device/CMSIS/Startup、`lks32mc07x_gpio.c`、`lks32mc07x_sys.c` 及原厂 NVR/trim 等链接依赖。
+
+### 2026-11-06 当前仓库状态（重要）
+
+用户已经把一份官方 Demo / Keil 工程提交到 `firmware/projects/keil/lks32mc071/`，其中包含整套 `lks32mc07x_periph_driver/`、旧的 `Kernal_Source/main.c` 和 `AppFunction/hardware_init.c`，还有本地生成的 HEX、LST、Keil 用户配置等。**不要把本节原来的集成步骤误认为还没做。**
+
+在当前 `LK_StdPeriph.uvprojx` 主目标 **Linko 07x Project** 中：
+- 芯片是 `LKS32MC071CBT8`，Keil Pack `Linko.LKS07x.1.2.0`；
+- 实际编译的主程序是 `../../../application/main.c`，而不是 `Kernal_Source/main.c`；
+- 实际编译的初始化是 `../../../platform/lks32mc071/system_startup.c` 和 `../../../board/lks_evb_mvpowpre/board_init.c`，旧 `AppFunction/hardware_init.c` 不在主目标源文件列表；
+- 仍包含 `AppFunction/interrupt.c` 和厂商 GPIO/SYS 等驱动；
+- 第二个目标 `Linko 07x Project_ac6` 的头文件路径指向 `LKS32MC08x_Periph_Driver`，当前未做兼容性验收，**不要选它作为 A0 实验目标**。
+
+用户报告已在本地编译成功，但仓库尚无本次 Build Output 日志，不能确认追踪到的 `Objects/*.hex` 是当前源文件重新生成的。状态：**USER-REPORTED BUILD PASS / BUILD LOG PENDING / HARDWARE NOT TESTED**。
+
+**当前不要迁移 SDK、删除旧文件或改写 Keil 源码引用**；先以这版可工作的布局进行 A0 验证。完成 A0 后，再在独立分支清理旧示例源文件，评估 SDK 挪到 `third_party/linko/` 是否必要。SDK 内含 `LICENSE`（BSD 3-Clause）及 `SLA_2025.pdf`，任何重新分发或重组先核实两份许可文件及实际适用范围。
+
+仓库根目录 `.gitignore` 已覆盖 Keil 临时配置和构建产物；**已经被 Git 追踪的文件不会因为新增 .gitignore 自动停止追踪**。必须在确认编译工程可恢复、保留必要证据之后，单独执行取消跟踪操作。
+
 
 ### Keil 集成步骤
 
@@ -37,4 +55,4 @@
 
 **复位期间或 GPIO 初始化之前，六路信号的默认状态仍需实测。** 代码让 GPIO 输出低电平不代表功率驱动器真实 Gate 关断已确认，也不能解除电机功率实验的硬件保护门槛。
 
-当前环境没有 Keil/ARM 硬件编译及烧录条件，本仓库提交状态必须保留 BUILD NOT VERIFIED / HARDWARE NOT TESTED。
+当前环境没有 Keil/ARM 编译器和实物烧录条件；用户报告的编译通过需要 Build Output/本次时间戳进一步佐证；硬件验收仍为 NOT TESTED。
