@@ -14,6 +14,7 @@
  * STOP1 is a software bench control, NOT a hardware emergency stop.
  * A1 does not validate dead-time, power-stage drive, or current protection.
  */
+#include <stdint.h>
 #include "lks32mc07x_lib.h"
 #include "test_mcpwm_single.h"
 
