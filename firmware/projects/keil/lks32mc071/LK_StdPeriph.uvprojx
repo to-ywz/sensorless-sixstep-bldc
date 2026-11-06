@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre</IncludePath>
+              <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre;..\..\..\tests\bench</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -402,6 +402,11 @@
               <FileName>board_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\board\lks_evb_mvpowpre\board_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>test_mcpwm_single.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_mcpwm_single.c</FilePath>
             </File>
           </Files>
         </Group>
