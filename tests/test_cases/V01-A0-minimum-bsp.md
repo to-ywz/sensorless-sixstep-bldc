@@ -1,7 +1,9 @@
 # V01-A0 — 最小 BSP / 控制板安全态验收
 
-- Status: **NOT TESTED**
+- Status: **USER-REPORTED BUILD PASS / BUILD LOG PENDING / HARDWARE NOT TESTED**
 - Target: LKS_EVB_MCU071CBT8_V1.0
+- GitHub 提交版本：8fef844a（Keil 工程加入；用户随后口头确认已成功编译）
+- Keil 主目标：Linko 07x Project（MCU：LKS32MC071CBT8）；不要选用尚未核实 Include Path 的 Linko 07x Project_ac6。
 - Vendor peripheral driver: V3.16
 - Reference Keil demo: V1.9 / 014_GPIO
 
@@ -12,6 +14,14 @@
 - [ ] 编译通过，无未定义函数或重复定义。
 - [ ] P1.4..P1.9 保持 GPIO AF0，未启用 MCPWM 外设。
 - [ ] P0.6 的标注与当前控制板图纸一致。
+
+## A1. 编译成功的证明（请由用户提交）
+
+- [ ] 在 Keil 的 Build Output 记录所选 Target（建议 Linko 07x Project）。
+- [ ] Build Output 明确出现 `main.c`、`board_init.c`、`system_startup.c` 编译记录，且 0 Error；`AppFunction/hardware_init.c`、`Kernal_Source/main.c` 不参与编译。
+- [ ] Build/Rebuild 后本次 `Objects/LK_StdPeriph.hex` 文件修改时间变化；不能使用 Git 仓库中旧的 HEX 作为新构建通过的证据。
+- [ ] 若有警告，保留警告全文，优先判断原厂代码/用户代码来源。
+- [ ] 保存 Build Output 截图或文本；只审核编译产物不代表硬件已测试。
 
 ## B. 上电实测（电机未连接，主功率桥未供电）
 
