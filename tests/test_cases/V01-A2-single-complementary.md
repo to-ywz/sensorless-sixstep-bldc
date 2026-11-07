@@ -13,6 +13,13 @@
 - 同一 SDK 的 HAL MCPWM 实现：用于交叉核对死区计数换算；注意 HAL MCPWM 源文件未加入当前 Keil 主目标。
 - 官方网站目前列出 LKS32MC07x 用户手册 V1.69（2026-07-11）、标准驱动库 V3.16（2026-08-07）和外设 Demo V1.9（2026-08-30）。独立 Demo 压缩包下载在本次核对中超时；本次具体配置以仓库所用 V3.16 标准驱动源码及其中的 MCPWM_Init 示例为准。
 
+官方资源入口：
+- [LKS32MC07x 用户手册列表（官网，当前列出 V1.69）](https://www.lksmcu.com/index.php/UserManual/)
+- [LKS32MC07x 外设驱动/外设 Demo 列表（官网，当前列出驱动 V3.16、Demo V1.9）](https://www.lksmcu.com/index.php/Reference_2/)
+- [LKS32MC07x Peripheral Demo V1.9 压缩包](https://sjk.lksmcu.com/static/upload/file/20230113/lks32mc07x_demo_prj_v1.9.zip)
+
+官网 PDF/ZIP 在本次远程抓取中出现超时；上述版本号来自官网资源列表，具体寄存器配置本轮以仓库当前 V3.16 标准外设驱动源码及其 MCPWM_Init 示例交叉核对，未声称已逐文件审阅独立 Demo 压缩包。
+
 结论：
 1. `MCPWM0_CENTRAL_PWM_MODE=0` 是中心对齐设置，不是推挽开关。
 2. `IO0_PPE` 才是 P/N 推挽交替使能；A2 必须保持 DISABLE。
