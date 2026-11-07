@@ -143,7 +143,8 @@ void bench_mcpwm_single_init(void)
     cfg.CH2P_default_output = MCPWM0_LOW_LEVEL;
     cfg.CH2N_default_output = MCPWM0_LOW_LEVEL;
 
-    cfg.IO0_PPE = ENABLE;
+    /* A1 observes CH0P only; disable P/N push-pull alternation. */
+    cfg.IO0_PPE = DISABLE;
 
     /* No FAIL/BKIN and no power-stage protection is tested in A1. */
     cfg.TR0_AEC = DISABLE;
