@@ -11,7 +11,9 @@
 #include "lks32mc07x_lib.h"
 #include "board_init.h"
 
-#if defined(BENCH_TEST_MCPWM_SINGLE)
+#if defined(BENCH_TEST_MCPWM_COMPLEMENTARY)
+#include "test_mcpwm_complementary.h"
+#elif defined(BENCH_TEST_MCPWM_SINGLE)
 #include "test_mcpwm_single.h"
 #endif
 
@@ -29,7 +31,18 @@ int main(void)
 {
     board_init_safe();
 
-#if defined(BENCH_TEST_MCPWM_SINGLE)
+#if defined(BENCH_TEST_MCPWM_COMPLEMENTARY)
+    /*
+     * A2 mode: CH0P/CH0N complementary PWM, logic-only observation.
+     * Keep the inverter DC bus disconnected and motor unplugged.
+     */
+    bench_mcpwm_complementary_init();
+
+    for (;;) {
+        bench_mcpwm_complementary_poll();
+        bench_delay(12000u);
+    }
+#elif defined(BENCH_TEST_MCPWM_SINGLE)
     /*
      * A1 mode is only for MCU logic-pin observation with the
      * inverter power stage unpowered and FN550-90K disconnected.
