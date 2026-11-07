@@ -3,9 +3,10 @@
  * @brief V0.1 staged MCU071 board bring-up entry point.
  *
  * Default: A0 GPIO-safe heartbeat.
- * Opt-in define BENCH_TEST_MCPWM_SINGLE: A1 logic-only PWM at P1.4.
+ * Opt-in define BENCH_TEST_MCPWM_SINGLE: A1 single-output PWM at P1.4.
+ * Opt-in define BENCH_TEST_MCPWM_COMPLEMENTARY: A2 CH0P/CH0N pair.
  *
- * Never energize the inverter power bus or connect the motor in A0/A1.
+ * Never energize the inverter power bus or connect the motor in A0/A1/A2.
  */
 #include <stdint.h>
 #include "lks32mc07x_lib.h"
