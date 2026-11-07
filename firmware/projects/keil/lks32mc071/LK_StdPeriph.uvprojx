@@ -408,6 +408,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\tests\bench\test_mcpwm_single.c</FilePath>
             </File>
+            <File>
+              <FileName>test_mcpwm_complementary.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_mcpwm_complementary.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
