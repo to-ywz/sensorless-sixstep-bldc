@@ -1,6 +1,6 @@
-# Firmware · V0.1-A0 最小 BSP
+# Firmware · V0.1 分阶段逻辑级验证
 
-状态：**USER-REPORTED BUILD PASS / BUILD LOG PENDING / HARDWARE NOT TESTED**。此阶段仅验证控制板基础运行，**电机和功率桥必须断开，禁止母线供电**。
+**当前状态（2026-11-08）：A0 最小 BSP、A1 单路 MCPWM、A2 单组互补 PWM 均有用户实测通过记录；A3 三组互补 PWM 待验证。** 仓库未归档完整 Build Output / 示波器原图；**驱动器、功率级、CMP/Fail 硬件 OCP 和电机运行均未通过验收**。所有 A0～A3 逻辑测试都要求断开电机及主功率母线。
 
 ## 组织架构
 
@@ -17,7 +17,7 @@
 
 选择官方 **014_GPIO** Keil 工程作为本地工程容器（不要直接修改原厂样例，先另存副本），继续使用它的 Device/CMSIS/Startup、`lks32mc07x_gpio.c`、`lks32mc07x_sys.c` 及原厂 NVR/trim 等链接依赖。
 
-### 2026-11-06 当前仓库状态（重要）
+### 2026-11-06 Keil 工程集成记录（历史基线；当前测试进度见页首）
 
 用户已经把一份官方 Demo / Keil 工程提交到 `firmware/projects/keil/lks32mc071/`，其中包含整套 `lks32mc07x_periph_driver/`、旧的 `Kernal_Source/main.c` 和 `AppFunction/hardware_init.c`，还有本地生成的 HEX、LST、Keil 用户配置等。**不要把本节原来的集成步骤误认为还没做。**
 
@@ -28,9 +28,9 @@
 - 仍包含 `AppFunction/interrupt.c` 和厂商 GPIO/SYS 等驱动；
 - 第二个目标 `Linko 07x Project_ac6` 的头文件路径指向 `LKS32MC08x_Periph_Driver`，当前未做兼容性验收，**不要选它作为 A0 实验目标**。
 
-用户报告已在本地编译成功，但仓库尚无本次 Build Output 日志，不能确认追踪到的 `Objects/*.hex` 是当前源文件重新生成的。状态：**USER-REPORTED BUILD PASS / BUILD LOG PENDING / HARDWARE NOT TESTED**。
+用户报告已在本地编译成功，但仓库尚无完整 Build Output 日志，不能独立确认追踪到的 `Objects/*.hex` 均由对应最新源码生成。**本段仅是 11 月 6 日的工程状态记录，后续 A0～A2 逻辑实测结果应以独立测试记录为准。**
 
-**当前不要迁移 SDK、删除旧文件或改写 Keil 源码引用**；先以这版可工作的布局进行 A0 验证。完成 A0 后，再在独立分支清理旧示例源文件，评估 SDK 挪到 `third_party/linko/` 是否必要。SDK 内含 `LICENSE`（BSD 3-Clause）及 `SLA_2025.pdf`，任何重新分发或重组先核实两份许可文件及实际适用范围。
+**不要在 A3 前随意迁移 SDK、删除旧文件或改写 Keil 源码引用**；继续使用已验证 A0～A2 的主目标配置。后续清理旧示例源文件应在独立分支评估，且须确保能够回退到可工作的构建。SDK 内含 `LICENSE`（BSD 3-Clause）及 `SLA_2025.pdf`，任何重新分发或重组先核实两份许可文件及实际适用范围。
 
 仓库根目录 `.gitignore` 已覆盖 Keil 临时配置和构建产物；**已经被 Git 追踪的文件不会因为新增 .gitignore 自动停止追踪**。必须在确认编译工程可恢复、保留必要证据之后，单独执行取消跟踪操作。
 
@@ -55,4 +55,4 @@
 
 **复位期间或 GPIO 初始化之前，六路信号的默认状态仍需实测。** 代码让 GPIO 输出低电平不代表功率驱动器真实 Gate 关断已确认，也不能解除电机功率实验的硬件保护门槛。
 
-当前环境没有 Keil/ARM 编译器和实物烧录条件；用户报告的编译通过需要 Build Output/本次时间戳进一步佐证；硬件验收仍为 NOT TESTED。
+当前仓库已有 A0～A2 用户实测记录（逻辑级）；缺少完整构建/波形归档，不可据此认定预驱、Gate、电流采样或功率级已验证。**下一步：A3 六路互补 PWM 逻辑级测试**，详见 `tests/test_cases/V01-A3-three-pair-complementary.md`。
