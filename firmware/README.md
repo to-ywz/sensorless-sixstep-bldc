@@ -1,6 +1,6 @@
 # Firmware · V0.1 分阶段逻辑级验证
 
-**当前状态（2026-11-08）：A0 最小 BSP、A1 单路 MCPWM、A2 单组互补 PWM 均有用户实测通过记录；A3 三组互补 PWM 待验证。** 仓库未归档完整 Build Output / 示波器原图；**驱动器、功率级、CMP/Fail 硬件 OCP 和电机运行均未通过验收**。所有 A0～A3 逻辑测试都要求断开电机及主功率母线。
+**当前状态（2026-11-08）：A0 最小 BSP、A1 单路 MCPWM、A2 单组互补 PWM 均有用户实测通过记录；A3 三组互补 PWM 用户实测逻辑通过。** 完整 Build Output 尚未归档，A3 代表性示波器照片已在本地 raw 目录归档；**驱动器、功率级、CMP/Fail 硬件 OCP 和电机运行均未通过验收**。所有 A0～A3 逻辑测试都要求断开电机及主功率母线。
 
 ## 组织架构
 
@@ -55,4 +55,8 @@
 
 **复位期间或 GPIO 初始化之前，六路信号的默认状态仍需实测。** 代码让 GPIO 输出低电平不代表功率驱动器真实 Gate 关断已确认，也不能解除电机功率实验的硬件保护门槛。
 
-当前仓库已有 A0～A2 用户实测记录（逻辑级）；缺少完整构建/波形归档，不可据此认定预驱、Gate、电流采样或功率级已验证。**下一步：A3 六路互补 PWM 逻辑级测试**，详见 `tests/test_cases/V01-A3-three-pair-complementary.md`。
+当前仓库已有 A0～A3 用户实测记录（逻辑级），A3 见 `tests/test_cases/V01-A3-three-pair-complementary.md`。不可据此认定预驱、Gate、电流采样或功率级已验证。下一步准备六步状态表的逻辑级验证。
+
+## A3 验收（2026-11-08）
+
+A3 用户实测逻辑通过，见 `tests/reports/2026-11-08_V01-A3-three-pair-complementary.md`。当前用户工程主目标已选择 ARM Compiler V6.22，并定义 `BENCH_TEST_MCPWM_THREE_PAIR`；不定义测试宏时源码仍进入A0。完整构建日志尚未归档。

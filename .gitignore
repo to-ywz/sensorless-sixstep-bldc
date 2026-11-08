@@ -33,3 +33,6 @@ third_party/
 Thumbs.db
 __pycache__/
 *.py[cod]
+
+# Private original measurement photos and waveforms
+/hardware/measurements/raw/
