@@ -1,6 +1,6 @@
 # V0.1-A2 — CH0P/CH0N 单组互补 PWM 验证
 
-- Status: **DESIGN REVIEW COMPLETE / CODE STAGED / BUILD AND HARDWARE TEST PENDING**
+- Status: **COMPLEMENTARY PWM / FREQUENCY / DEADTIME OBSERVED; EDGE-RINGING ISSUE OPEN; FULL A2 ACCEPTANCE PENDING**
 - Scope: MCU logic-level validation of one complementary PWM pair only.
 - Target: LKS32MC071CBT8, LKS_EVB_MCU071CBT8 + LKS_EVB_MVPOWPRE.
 - Safety: inverter DC bus physically disconnected; FN550-90K and motor phases disconnected.
@@ -27,6 +27,17 @@
 4. 中心对齐互补输出在 `TH00` 处先关闭 N，延迟 DTH0 后打开 P；在 `TH01` 处先关闭 P，延迟 DTH1 后打开 N。
 5. 当前标准驱动结构体将 `DeadTimeCH012N/P` 映射到 CH0/1/2 共用的一组 N/P 死区计数；CH3/4/5 使用另一组。仓库转换版手册部分文字描述与结构体字段分组不完全一致。A2 仅测 CH0；扩展三相前需要再核对官方当前手册和芯片读回。
 6. HAL 的纳秒死区换算使用 `HAL_CLK_GetMcuFreq()/MCPWM时钟分频`。A1 实测载波 10.086kHz、TH0=2400，反推 MCPWM 时钟约 48.42MHz。A2 使用 48 个计数，估算死区约 0.99µs。该值仅用于逻辑级示波器验证，不是最终功率级死区。
+
+## 实测补充：边沿振铃（2026-11-08）
+
+A2 互补输出波形已观察到约 10.1kHz 两路互补 PWM，正脉宽约 24% / 74%，死区约 1µs。边沿附近存在衰减振铃，已作为独立硬件遗留问题记录：
+- MCU P1.4 对 MCU 本地 GND，×10 探头、短弹簧地：负向最低值约 -0.8V。
+- 预驱输入端对预驱本地 GND：负向最低值约 -1.2V。
+- 正向过冲可见，但本次未记录可靠峰值。
+- 缩短测量回路/信号连接后，振铃幅度有所下降；根因尚未完全分离。
+- 当前底板不便串入阻尼电阻，因此不在现板强行改线。下一版自绘底板考虑预留 MCU 端串联阻尼电阻、预驱输入端可选 RC 焊盘，以及邻近信号/GND 测试点。
+
+详细现象、风险、候选改进及关闭条件见 [HW-001：MCPWM 输出边沿振铃与负向过冲](../../hardware/issues/HW-001-mcpwm-edge-ringing.md)。**该问题仍为 OPEN / DEFERRED，不得视为已经解决。**
 
 ## 硬件引脚
 
@@ -92,6 +103,7 @@
 - [ ] START1 启动、STOP1 关闭、双键 STOP 优先均通过。
 - [ ] STOP/复位/上电后 P1.4、P1.5 均保持低电平。
 - [ ] P1.6～P1.9 始终保持低电平。
+- [ ] MCU/预驱输入端边沿瞬态的绝对最大额定值核对与风险关闭（关联 HW-001，当前未完成）。
 - [ ] 已归档示波器波形和实际死区测量值。
 
 A2 通过仅代表 MCU 逻辑互补 PWM 与死区配置验证完成，不代表预驱、功率器件或电机功率级通过验证。
