@@ -7,19 +7,22 @@
  * Opt-in define BENCH_TEST_MCPWM_COMPLEMENTARY: A2 CH0P/CH0N pair.
  *
  * Opt-in define BENCH_TEST_MCPWM_THREE_PAIR: A3 CH0/1/2 P/N.
+ * Opt-in define BENCH_TEST_SIXSTEP_LOGIC: A4 six-sector logic-only test.
  *
- * Never energize the inverter power bus or connect the motor in A0/A1/A2/A3.
+ * Never energize the inverter power bus or connect the motor in A0/A1/A2/A3/A4.
  */
 #include <stdint.h>
 #include "lks32mc07x_lib.h"
 #include "board_init.h"
 
 #if (defined(BENCH_TEST_MCPWM_SINGLE) + defined(BENCH_TEST_MCPWM_COMPLEMENTARY) + \
-     defined(BENCH_TEST_MCPWM_THREE_PAIR)) > 1
+     defined(BENCH_TEST_MCPWM_THREE_PAIR) + defined(BENCH_TEST_SIXSTEP_LOGIC)) > 1
 #error "Select only one MCPWM bench test"
 #endif
 
-#if defined(BENCH_TEST_MCPWM_THREE_PAIR)
+#if defined(BENCH_TEST_SIXSTEP_LOGIC)
+#include "test_sixstep_logic.h"
+#elif defined(BENCH_TEST_MCPWM_THREE_PAIR)
 #include "test_mcpwm_three_pair.h"
 #elif defined(BENCH_TEST_MCPWM_COMPLEMENTARY)
 #include "test_mcpwm_complementary.h"
@@ -41,7 +44,13 @@ int main(void)
 {
     board_init_safe();
 
-#if defined(BENCH_TEST_MCPWM_THREE_PAIR)
+#if defined(BENCH_TEST_SIXSTEP_LOGIC)
+    bench_sixstep_logic_init();
+    for (;;) {
+        /* A4 polls a hardware timebase; do not add A0-A3 busy delays. */
+        bench_sixstep_logic_poll();
+    }
+#elif defined(BENCH_TEST_MCPWM_THREE_PAIR)
     /* A3: logic pins only; disconnect inverter DC bus and motor. */
     bench_mcpwm_three_pair_init();
     for (;;) {

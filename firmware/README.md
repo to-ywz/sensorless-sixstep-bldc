@@ -60,3 +60,7 @@
 ## A3 验收（2026-11-08）
 
 A3 用户实测逻辑通过，见 `tests/reports/2026-11-08_V01-A3-three-pair-complementary.md`。当前用户工程主目标已选择 ARM Compiler V6.22，并定义 `BENCH_TEST_MCPWM_THREE_PAIR`；不定义测试宏时源码仍进入A0。完整构建日志尚未归档。
+
+## A4 逻辑测试实现（2026-11-08）
+
+A4已接入Keil主目标，使用互斥宏 `BENCH_TEST_SIXSTEP_LOGIC`；保留A1～A3回归入口。不定义任何测试宏仍为A0。默认START单步六扇区、STOP全低，可通过Watch选择自动100 ms序列、方向及占空比。完整编译已通过，实物验收尚未运行；操作和验收见 `../tests/test_cases/V01-A4-six-step-logic.md`。测试保持母线断电、电机断开。

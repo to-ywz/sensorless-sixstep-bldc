@@ -1,7 +1,7 @@
 # V0.1-A4 — 六步状态表逻辑输出验证
 
-- Status: PLANNED / NOT IMPLEMENTED / NOT RUN
-- Version: A4 验收方案初版（2026-11-08）；当前固件仍为 A3，暂不修改测试宏。
+- Status: IMPLEMENTED / BUILD PASS / BENCH NOT RUN
+- Version: A4 实现初版（2026-11-08）；主目标改用 `BENCH_TEST_SIXSTEP_LOGIC`，A0～A3 入口保留，宏互斥。
 - Predecessor: A3 用户实测逻辑通过，见 2026-11-08 A3 报告。
 - Requirement: SYS-COMM-001；关联 V01-PWM-001。本用例仅覆盖其 MCU 逻辑子集。
 - Scope: 六扇区输出、正逆序遍历、占空比、切换非重叠、启停安全态。
@@ -60,3 +60,27 @@
 ## 5. 放行
 
 全部项目通过才关闭A4；A3不回退，A4失败回到六路全低。A4通过后仍需独立完成驱动器与CMP1→FAIL1保护链、采样及功率级安全审计，才讨论受控功率试验。
+
+## 6. 实现与操作说明
+
+- Keil 使用主目标 `Linko 07x Project`，仅定义 `BENCH_TEST_SIXSTEP_LOGIC`。取消该宏并仅定义 `BENCH_TEST_MCPWM_THREE_PAIR` 即回归A3；更早的两个测试宏也保留。不定义测试宏为A0。
+- 默认静态单步、正序、250‰：START启动S0；释放后再按START前进一个扇区；STOP始终优先，上电按住START不启动。
+- Keil Watch变量：`g_a4_sector`（0～5，255为停机）、`g_a4_running`、`g_a4_transitions`、`g_a4_fault`（0无错，1输出应用失败，2输入/状态非法）。
+- 停机时设置 `g_a4_mode=0/1`（手动/自动），`g_a4_reverse=0/1`（正序/逆序），`g_a4_duty_permille=100..500`。START重新启动S0。运行中改变任一配置先停机，需另一次START。一次改完各值再启动。
+- 自动模式100 ms/扇区，START在自动运行中不额外跳步。每圈六步，三路H或三路L可选总览；两探头按第4节分组验收。
+- 调试命令 `g_a4_command`：1启动/手动推进、2停止、3运行中应用 `g_a4_test_sector`。命令读取后清零；3配合扇区6或更大验证非法输入全低。调试命令1是显式的软件启动，仍服从实体STOP。
+- 运行中将占空比设为99、方向设为2等，会先停机；再次START校验失败并保持全低。恢复合法值后显式START。
+
+### 时序实现依据与限制
+
+SDK `Source/lks32mc07x_mcpwm.c` 的 `MCPWM_Init()` 定义IO01/IO23中NS/PS/SCTRL字段；仓库 `user_manual/13_MCPWM.md` 的UPDATE表列出阈值位0～5、CNT0位11，IO源选择不在该更新位表中。本实现不假定IO写入具有影子同步功能。
+
+每次切换先清MOE并将六路转GPIO低，等待5个标称微秒；暂停CNT0，写完整IO状态及阈值，以 `UPDATE=0x083f` 装载阈值/CNT0，不写保留位；再等待5个标称微秒，复用到MCPWM，复查实体STOP，启动CNT0并统一使能CH0/1/2。实际全低窗口包含寄存器/复用操作开销，至少2 µs的要求仍须台架确认。PWM每次换相重新定相，第一周期及首尾窄脉冲列为实测重点，不宣称已实现生产级连续同步换相。
+
+SysTick作为A4专用自由运行计数器，无中断，按48 MHz标称时钟累计；不依赖软件忙循环计时。默认驻留时间与实际RC时钟误差成比例，100 ms±1 ms要求须实测；必要时以实测时钟设置 `BENCH_A4_CLOCK_HZ`，不得用未校准的软件延时证明精度。自由运行计数器要求轮询间隔小于一次24位回绕（约349 ms）；调试暂停后先STOP再重新开始，不以暂停期间波形判断运行行为。
+
+低侧常高和悬空相使用软件固定电平控制，不依赖互补PWM死区来保证换相隔离。实际H/L非重叠由先全低流程实测验收。CMP/Fail保护输入未启用，本模式只供断母线、断电机的逻辑观察。
+
+### 构建及检查
+
+Keil V6.22完整Rebuild已通过（0错误、0警告），基于隔离构建副本，未覆盖本地已有HEX、未烧录。六步表与台架控制的宿主测试见 `tests/unit/README.md`。构建记录见 `tests/reports/2026-11-08_V01-A4-build.md`。上述不代替硬件验收。

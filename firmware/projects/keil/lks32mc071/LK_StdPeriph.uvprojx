@@ -339,9 +339,9 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>BENCH_TEST_MCPWM_THREE_PAIR</Define>
+              <Define>BENCH_TEST_SIXSTEP_LOGIC</Define>
               <Undefine></Undefine>
-              <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre;..\..\..\tests\bench</IncludePath>
+              <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre;..\..\..\tests\bench;..\..\..\motor\commutation;..\..\..\platform\lks32mc071</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -419,6 +419,21 @@
               <FileName>test_mcpwm_three_pair.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\tests\bench\test_mcpwm_three_pair.c</FilePath>
+            </File>
+            <File>
+              <FileName>test_sixstep_logic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_sixstep_logic.c</FilePath>
+            </File>
+            <File>
+              <FileName>sixstep_table.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
+            </File>
+            <File>
+              <FileName>bench_sixstep_output.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -949,6 +964,21 @@
               <FileName>test_mcpwm_three_pair.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\tests\bench\test_mcpwm_three_pair.c</FilePath>
+            </File>
+            <File>
+              <FileName>test_sixstep_logic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_sixstep_logic.c</FilePath>
+            </File>
+            <File>
+              <FileName>sixstep_table.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
+            </File>
+            <File>
+              <FileName>bench_sixstep_output.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
             </File>
           </Files>
         </Group>
