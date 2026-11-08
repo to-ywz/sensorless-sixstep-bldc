@@ -1,6 +1,6 @@
 # V0.1-A2 — CH0P/CH0N 单组互补 PWM 验证
 
-- Status: **COMPLEMENTARY PWM / FREQUENCY / DEADTIME OBSERVED; EDGE-RINGING ISSUE OPEN; FULL A2 ACCEPTANCE PENDING**
+- Status: **FUNCTIONAL LOGIC-LEVEL TEST PASSED (USER-CONFIRMED); HW-001 RECORD ONLY; POWER-STAGE VALIDATION NOT PERFORMED**
 - Scope: MCU logic-level validation of one complementary PWM pair only.
 - Target: LKS32MC071CBT8, LKS_EVB_MCU071CBT8 + LKS_EVB_MVPOWPRE.
 - Safety: inverter DC bus physically disconnected; FN550-90K and motor phases disconnected.
@@ -30,14 +30,14 @@
 
 ## 实测补充：边沿振铃（2026-11-08）
 
-A2 互补输出波形已观察到约 10.1kHz 两路互补 PWM，正脉宽约 24% / 74%，死区约 1µs。边沿附近存在衰减振铃，已作为独立硬件遗留问题记录：
+A2 互补输出波形已观察到两路互补 PWM：CH0P 约 10.095kHz、正占空比约 24.0%；CH0N 约 10.092kHz、正占空比约 74.0%；死区约 1µs（一次游标读数约 1.2µs）。按键启停测试已由用户确认通过。边沿振铃单独作为轻量记录 HW-001，不影响本阶段逻辑功能通过：
 - MCU P1.4 对 MCU 本地 GND，×10 探头、短弹簧地：负向最低值约 -0.8V。
-- 预驱输入端对预驱本地 GND：负向最低值约 -1.2V。
+- 本项目功率底板驱动器输入侧对驱动器本地 GND：负向最低值约 -1.2V。
 - 正向过冲可见，但本次未记录可靠峰值。
 - 缩短测量回路/信号连接后，振铃幅度有所下降；根因尚未完全分离。
-- 当前底板不便串入阻尼电阻，因此不在现板强行改线。下一版自绘底板考虑预留 MCU 端串联阻尼电阻、预驱输入端可选 RC 焊盘，以及邻近信号/GND 测试点。
+- 当前仅记录现象，不在现板强行改线，也暂不将 RC/串联阻尼列为确定整改。后续若出现相关异常或进入下一版底板设计评审，再将该记录与其它证据关联分析。
 
-详细现象、风险、候选改进及关闭条件见 [HW-001：MCPWM 输出边沿振铃与负向过冲](../../hardware/issues/HW-001-mcpwm-edge-ringing.md)。**该问题仍为 OPEN / DEFERRED，不得视为已经解决。**
+详细现象、风险、候选改进及关闭条件见 [HW-001：MCPWM 输出边沿振铃与负向过冲](../../hardware/issues/HW-001-mcpwm-edge-ringing.md)。**该问题为 RECORD ONLY / DEFERRED，不代表已定位根因或完成整改。**
 
 ## 硬件引脚
 
@@ -96,14 +96,14 @@ A2 互补输出波形已观察到约 10.1kHz 两路互补 PWM，正脉宽约 24%
 ## 验收清单
 
 - [ ] Rebuild All 0 Error，下载的 HEX 对应当前 A2 构建。
-- [ ] P1.4、P1.5 各自频率约 10.086kHz，周期一致。
-- [ ] 两路逻辑电平极性正确，正常工作时不同时为高。
-- [ ] N 关闭到 P 打开之间的死区约 0.99µs。
-- [ ] P 关闭到 N 打开之间的死区约 0.99µs。
-- [ ] START1 启动、STOP1 关闭、双键 STOP 优先均通过。
+- [x] P1.4、P1.5 频率约 10.1kHz（实测约 10.095kHz / 10.092kHz）。
+- [x] 两路逻辑电平极性正确，正常工作时不同时为高（用户示波器波形确认）。
+- [x] N 关闭到 P 打开之间的死区约 1µs（游标读数约 1.2µs）。
+- [x] P 关闭到 N 打开之间的死区约 1µs（用户确认两方向死区约 1µs）。
+- [x] START1 启动、STOP1 关闭、双键 STOP 优先均通过（用户确认）。
 - [ ] STOP/复位/上电后 P1.4、P1.5 均保持低电平。
 - [ ] P1.6～P1.9 始终保持低电平。
 - [ ] MCU/预驱输入端边沿瞬态的绝对最大额定值核对与风险关闭（关联 HW-001，当前未完成）。
 - [ ] 已归档示波器波形和实际死区测量值。
 
-A2 通过仅代表 MCU 逻辑互补 PWM 与死区配置验证完成，不代表预驱、功率器件或电机功率级通过验证。
+A2 当前按用户实测确认：单组互补 PWM、频率/占空比、约 1µs 死区及按键启停功能通过。该结论仅覆盖逻辑级功能，不代表驱动器、功率器件或电机功率级通过验证。HW-001 的额定值核对保留为后续进入驱动器/功率级测试前的检查项。
