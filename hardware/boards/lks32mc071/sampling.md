@@ -30,11 +30,12 @@ P5/P6/P7 为三相电流采样模式选择：图纸标注 P-X 采样 MOS 内阻�
 - CMP0 正端可选 OPA0_OUT / OPA1_OUT。
 - CMP1 正端可选 OPA2_OUT / OPA3_OUT。
 
-按 MCPWM Fail 映射：
-- CMP0 Fail 对应 MCPWM CH0/1/2 P/N。
-- CMP1 Fail 对应 MCPWM CH3 P/N。
+按仓库转换版手册 V1.70 的 `MCPWM0_FAIL012` 寄存器表和 SDK V3.16 对照：
+- `FAIL0_SEL=1` 可将 CMP0 原始输出用于 CH0/1/2 的 FAIL0。
+- **`FAIL1_SEL=1` 可将 CMP1 原始输出用于 CH0/1/2 的 FAIL1**；不是只能保护 CH3。
+- `MCPWM0_FAIL345` 的 FAIL2/FAIL3 分别也可选择 CMP0/CMP1，作用于 CH3/4/5。
 
-因此当前 OPA2（U 相）及 OPA3（R69 公共采样）虽可进入 CMP1，但 CMP1 Fail 不直接作用于三相桥 CH0/1/2；OPA0/OPA1 可进入 CMP0，但 CMP0 一次只能选择一路。**三电阻采样提供三路相电流检测信号，并不自动提供三路并行比较器保护。** 三相逐波保护覆盖方案尚未闭合。
+**结论：** OPA2（U 相）→CMP1→FAIL1→CH0/1/2 在寄存器层面存在内部候选通路，无须先做 CMP1_OUT→BKIN0 外部飞线；但 CMP1 一次仍只能选择一路输入，且 CMP0 当前已分配给 BEMF。三电阻采样并不自动等于三相并行硬件过流保护，六扇区覆盖及逐波自动恢复尚未实测。
 
 ## 4. 测试计划
 
@@ -62,7 +63,7 @@ P5/P6/P7 为三相电流采样模式选择：图纸标注 P-X 采样 MOS 内阻�
 
 ## 6. CMP0 动态选择用于硬件 OCP 的候选
 
-> **方案状态更新（2026-11-06）：** 本节 CMP0 用于过流的候选暂时暂停。当前保留 CMP0 做 BEMF 过零、CMP1 做过流；先验证 CMP1_OUT（P2.5）经外部飞线到 MCPWM_BKIN0（P2.3），不先修改 Hall/BEMF 网络。P0.0 不支持 BKIN0，之前的 P2.5→P0.0 飞线建议错误。
+> **方案状态更新（2026-11-08）：** 本节 CMP0 OCP 候选已暂停。当前保留 CMP0 做 BEMF、CMP1 做过流，**优先验证内部 CMP1→MCPWM0_FAIL012.FAIL1→CH0/1/2**，暂不飞线或改动 Hall/BEMF 网络。P2.5→P2.3/BKIN0 仅是必要时的外部备选；P0.0 不支持 BKIN0。
 
 > **现有板卡冲突：** PU/PV/PW 当前已经接到 CMP0_IP1/IP2/IP3，CMP0 正在承担 BEMF 过零检测。以下 CMP0 动态选择 OPA0/OPA1 的 OCP 方案，只有在将 BEMF 三相信号物理改接到 CMP1_IP1/IP2/IP3，并处理 Hall 端 R51/R52/R53 上拉及 10nF 对地电容后才可实施；否则不能同时满足 BEMF 硬件过零和 CMP0 硬件 OCP。
 
