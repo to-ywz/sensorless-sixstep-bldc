@@ -11,6 +11,25 @@
 #endif
 #define PERIOD 2400u
 #define TICK_MASK 0x00ffffffu
+/* Register basis: SDK V3.16 Include/lks32mc07x_user_manual.h and
+ * user_manual/13_MCPWM.md, IO01/IO23, UPDATE, TCLK, FAIL012 and PRT.
+ * Each channel occupies one byte; CH1/CH3 use the upper byte.
+ * These words intentionally leave inversion, swap and work-mode bits zero.
+ */
+#define IO_CHANNEL_SHIFT       8u
+#define IO_UPPER_CHANNEL_MASK  (0xffu << IO_CHANNEL_SHIFT)
+#define IO_PAIR_LOW            (MCPWM0_IO01_CH0_NS_BIT | MCPWM0_IO01_CH0_PS_BIT)
+#define IO_HIGH_SIDE_PWM       MCPWM0_IO01_CH0_NS_BIT
+#define IO_LOW_SIDE_ON         (IO_PAIR_LOW | MCPWM0_IO01_CH0_SCTRLN_BIT)
+#define UPDATE_CH012_THRESHOLDS (MCPWM0_UPDATE_TH00_UPDATE_BIT | \
+                                MCPWM0_UPDATE_TH01_UPDATE_BIT | \
+                                MCPWM0_UPDATE_TH10_UPDATE_BIT | \
+                                MCPWM0_UPDATE_TH11_UPDATE_BIT | \
+                                MCPWM0_UPDATE_TH20_UPDATE_BIT | \
+                                MCPWM0_UPDATE_TH21_UPDATE_BIT)
+#define UPDATE_CH012_AND_CNT0 (UPDATE_CH012_THRESHOLDS | MCPWM0_UPDATE_CNT0_UPDATE_BIT)
+#define MCPWM_WRITE_UNLOCK 0xDEADu
+#define MCPWM_WRITE_LOCK   0xCAFEu
 static uint32_t last_tick, elapsed_ticks;
 
 uint32_t bench_sixstep_clock(void)
@@ -86,25 +105,25 @@ int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
      * No inversion, exchange or push-pull. IO fields are not in UPDATE mask;
      * writes occur with MOE cleared AND all measured pads held GPIO-low.
      */
-    for (i=0u;i<3u;++i) io[i]=0x0cu; /* P/N forced low */
-    io[state.pwm_phase]=0x04u;       /* P timer, N forced low */
-    io[state.sink_phase]=0x1cu;      /* P forced low, N forced high */
+    for (i=0u;i<3u;++i) io[i]=IO_PAIR_LOW; /* P/N forced low */
+    io[state.pwm_phase]=IO_HIGH_SIDE_PWM;       /* P timer, N forced low */
+    io[state.sink_phase]=IO_LOW_SIDE_ON;      /* P forced low, N forced high */
     width=((2u*PERIOD+1u)*duty_permille+500u)/1000u;
     half=(int32_t)(width/2u);
-    MCPWM0_PRT=0xDEADu;
+    MCPWM0_PRT=MCPWM_WRITE_UNLOCK;
     /* Pause counter0 while loading a complete state; this bench explicitly
      * restarts PWM phase at each commutation, not production synchronous PWM.
      */
-    MCPWM0_TCLK &= ~BIT6;
-    MCPWM0_IO01=io[0] | (io[1]<<8);
-    MCPWM0_IO23=(MCPWM0_IO23 & 0xff00u) | io[2];
+    MCPWM0_TCLK &= ~MCPWM0_TCLK_BASE_CNT0_EN_BIT;
+    MCPWM0_IO01=io[0] | (io[1]<<IO_CHANNEL_SHIFT);
+    MCPWM0_IO23=(MCPWM0_IO23 & IO_UPPER_CHANNEL_MASK) | io[2];
     MCPWM0_TH00=MCPWM0_TH10=MCPWM0_TH20=(uint16_t)(-half);
     MCPWM0_TH01=MCPWM0_TH11=MCPWM0_TH21=(uint16_t)((int32_t)width-half);
     MCPWM0_CNT0=(uint16_t)(-(int32_t)PERIOD);
     /* Only compare thresholds and CNT0: do not write reserved update bits. */
-    MCPWM0_UPDATE=0x083fu;
+    MCPWM0_UPDATE=UPDATE_CH012_AND_CNT0;
     __DSB();
-    MCPWM0_PRT=0xCAFEu;
+    MCPWM0_PRT=MCPWM_WRITE_LOCK;
     blank_delay();
     for (pin=BOARD_PWM_FIRST_PIN;pin<=BOARD_PWM_LAST_PIN;++pin)
         GPIO_PinAFConfig(GPIO1,pin,AF3_MCPWM);
@@ -112,9 +131,9 @@ int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
     if (GPIO_ReadInputDataBit(GPIO2,GPIO_Pin_12)==0u) {
         bench_sixstep_output_stop(); return 0;
     }
-    MCPWM0_PRT=0xDEADu;
-    MCPWM0_TCLK |= BIT6;
-    MCPWM0_FAIL012 |= BIT6; /* CH0/1/2 only; do not enable CH3/4/5. */
-    MCPWM0_PRT=0xCAFEu;
+    MCPWM0_PRT=MCPWM_WRITE_UNLOCK;
+    MCPWM0_TCLK |= MCPWM0_TCLK_BASE_CNT0_EN_BIT;
+    MCPWM0_FAIL012 |= MCPWM0_FAIL012_MOE_BIT; /* CH0/1/2 only; do not enable CH3/4/5. */
+    MCPWM0_PRT=MCPWM_WRITE_LOCK;
     return 1;
 }
