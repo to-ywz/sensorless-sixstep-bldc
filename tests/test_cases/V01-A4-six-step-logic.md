@@ -1,6 +1,6 @@
 # V0.1-A4 — 六步状态表逻辑输出验证
 
-- Status: IMPLEMENTED / BUILD PASS / BENCH NOT RUN
+- Status: CORE LOGIC USER-REPORTED PASS / QUANTITATIVE ACCEPTANCE ITEMS OPEN
 - Version: A4 实现初版（2026-11-08）；主目标改用 `BENCH_TEST_SIXSTEP_LOGIC`，A0～A3 入口保留，宏互斥。
 - Predecessor: A3 用户实测逻辑通过，见 2026-11-08 A3 报告。
 - Requirement: SYS-COMM-001；关联 V01-PWM-001。本用例仅覆盖其 MCU 逻辑子集。
@@ -84,3 +84,9 @@ SysTick作为A4专用自由运行计数器，无中断，按48 MHz标称时钟�
 ### 构建及检查
 
 Keil V6.22完整Rebuild已通过（0错误、0警告），基于隔离构建副本，未覆盖本地已有HEX、未烧录。六步表与台架控制的宿主测试见 `tests/unit/README.md`。构建记录见 `tests/reports/2026-11-08_V01-A4-build.md`。上述不代替硬件验收。
+
+## 7. 2026-11-09 实测汇总
+
+核心逻辑功能用户反馈正常：六步状态、三相两个方向交叉点、三档占空比及STOP/复位/配置变更/非法参数。WL→VL代表交接约58.4 µs；50%设置实测49.0%、10.089 kHz；六步约600 ms，单个高侧包络约200 ms（两个扇区）。15张原图按规范本地归档。
+
+仍保留原标准中的定量及记录缺项：逐扇区100 ms±1 ms、STOP延迟≤1 ms、明确重复次数、12种切换逐项间隔和部分测量条件。不将用户总体确认扩大为未提供的具体数字。完整证据分级及索引见[本轮实测报告](../reports/2026-11-09_V01-A4-six-step-logic.md)。
