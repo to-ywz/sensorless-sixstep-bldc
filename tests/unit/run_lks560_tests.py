@@ -17,6 +17,8 @@ cases = [
     ('table', [model], ['tests/unit/test_sixstep_table.c', model+'/sixstep_table.c']),
     ('bench', ['tests/unit/fakes', bench, platform, model],
      ['tests/unit/test_sixstep_bench.c', bench+'/test_sixstep_logic.c', model+'/sixstep_table.c']),
+    ('gate', ['tests/unit/fakes', bench, platform],
+     ['tests/unit/test_gate_driver.c', bench+'/test_gate_driver.c']),
     ('lks560', ['tests/unit/lks560_fakes', board, platform, model, bench],
      ['tests/unit/test_lks560_outputs.c', board+'/board_init.c',
       platform+'/bench_sixstep_output.c', platform+'/lks560_pwm_defaults.c',

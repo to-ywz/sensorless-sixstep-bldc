@@ -131,6 +131,20 @@ int main(void)
     /* Preserve CH3 upper byte while applying a CH0/1/2 state. */
     io23=MCPWM0_IO23=0xa500u;
     assert(bench_sixstep_output_apply(0,500));assert((MCPWM0_IO23&0xff00u)==io23);
+    /* A5 backend: never enables a second phase or both internal requests. */
+    for(s=0;s<3;s++)for(d=0;d<2;d++) {
+        assert(bench_gate_output_apply(s,d));
+        for(p=0;p<3;p++)for(t=0;t<2;t++) {
+            assert(request(p,0,t)==(p==s && d?t:0u));
+            assert(request(p,1,t)==(p==s && !d?1u:0u));
+            assert(!(request(p,0,t)&&request(p,1,t)));
+            assert(pad(p,0,t)==(p==s && d?t:0u));
+            assert(pad(p,1,t)==(p==s && !d?0u:1u));
+        }
+        MCPWM0_FAIL012&=~64u;assert_off();
+    }
+    assert(!bench_gate_output_apply(3,0));assert_off();
+    assert(!bench_gate_output_apply(0,2));assert_off();
     reset_board();bench_mcpwm_single_init();assert_defaults();assert_off();
     bench_mcpwm_single_enable();
     for(p=0;p<3;p++)for(t=0;t<2;t++){

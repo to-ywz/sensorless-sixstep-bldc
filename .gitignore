@@ -36,3 +36,6 @@ __pycache__/
 
 # Private original measurement photos and waveforms
 /hardware/measurements/raw/
+
+# Local vendor schematics: private reference copies, not for publication
+/hardware/schematics/private/

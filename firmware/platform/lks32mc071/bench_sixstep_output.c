@@ -98,22 +98,23 @@ void bench_sixstep_output_init(void)
     MCPWM_Init(&cfg);
     bench_sixstep_output_stop();
 }
-int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
+static int apply_requests(uint32_t pwm_phase, uint32_t sink_phase, uint32_t duty_permille)
 {
-    SixstepState state;
     uint32_t pin, i, io[3], width;
     int32_t half;
     /* Invalid inputs also remove the previous valid output immediately. */
     bench_sixstep_output_stop();
-    if (!sixstep_get(sector,&state) || !sixstep_duty_valid(duty_permille)) return 0;
+    if ((pwm_phase >= 3u && pwm_phase != 255u) ||
+        (sink_phase >= 3u && sink_phase != 255u) ||
+        pwm_phase == sink_phase || !sixstep_duty_valid(duty_permille)) return 0;
     blank_delay();
     /* SDK IO01/IO23 layout: NS bit2, PS bit3, N static level bit4.
      * N is inverted, no P/N exchange or push-pull. IO fields are not in UPDATE mask;
      * writes occur with MOE cleared AND all measured pads held HIN=0/LIN=1.
      */
     for (i=0u;i<3u;++i) io[i]=IO_PAIR_OFF; /* internal P/N=0/0 -> physical HIN/LIN=0/1 */
-    io[state.pwm_phase]=IO_HIGH_SIDE_PWM;       /* internal P=timer, N=0 -> LIN high */
-    io[state.sink_phase]=IO_LOW_SIDE_ON;      /* internal P=0, N=1 -> LIN low */
+    if (pwm_phase < 3u) io[pwm_phase]=IO_HIGH_SIDE_PWM;       /* internal P=timer, N=0 -> LIN high */
+    if (sink_phase < 3u) io[sink_phase]=IO_LOW_SIDE_ON;      /* internal P=0, N=1 -> LIN low */
     width=((2u*PERIOD+1u)*duty_permille+500u)/1000u;
     half=(int32_t)(width/2u);
     MCPWM0_PRT=MCPWM_WRITE_UNLOCK;
@@ -142,4 +143,23 @@ int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
     MCPWM0_FAIL012 |= MCPWM0_FAIL012_MOE_BIT; /* CH0/1/2 only; do not enable CH3/4/5. */
     MCPWM0_PRT=MCPWM_WRITE_LOCK;
     return 1;
+}
+
+int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
+{
+    SixstepState state;
+    if (!sixstep_get(sector, &state)) {
+        bench_sixstep_output_stop();
+        return 0;
+    }
+    return apply_requests(state.pwm_phase, state.sink_phase, duty_permille);
+}
+
+int bench_gate_output_apply(uint32_t phase, uint32_t high_pwm)
+{
+    if (phase >= 3u || high_pwm > 1u) {
+        bench_sixstep_output_stop();
+        return 0;
+    }
+    return apply_requests(high_pwm ? phase : 255u, high_pwm ? 255u : phase, 250u);
 }

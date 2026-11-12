@@ -339,7 +339,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>BENCH_TEST_SIXSTEP_LOGIC</Define>
+              <Define>BENCH_TEST_GATE_DRIVER</Define>
               <Undefine></Undefine>
               <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre;..\..\..\tests\bench;..\..\..\motor\commutation;..\..\..\platform\lks32mc071</IncludePath>
             </VariousControls>
@@ -424,6 +424,11 @@
               <FileName>test_sixstep_logic.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\tests\bench\test_sixstep_logic.c</FilePath>
+            </File>
+            <File>
+              <FileName>test_gate_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_gate_driver.c</FilePath>
             </File>
             <File>
               <FileName>sixstep_table.c</FileName>
@@ -974,6 +979,11 @@
               <FileName>test_sixstep_logic.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\tests\bench\test_sixstep_logic.c</FilePath>
+            </File>
+            <File>
+              <FileName>test_gate_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_gate_driver.c</FilePath>
             </File>
             <File>
               <FileName>sixstep_table.c</FileName>

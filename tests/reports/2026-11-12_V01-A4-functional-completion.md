@@ -29,15 +29,10 @@
 
 - [首次A4实测及15张本地原图索引](2026-11-09_V01-A4-six-step-logic.md)
 - [2026-11-11混合输出修复及三相回归](2026-11-11_FIX-A4-internal-requests.md)
-- [2026-11-12低侧栅极回归](2026-11-12_V01-A4-low-side-regression.md)
+- [2026-11-12低侧栅极回归](2026-11-12_V01-A5-low-side-regression.md)
+- [A5实现及A4兼容性构建](2026-11-12_V01-A5-build.md)
 - [A4测试用例](../test_cases/V01-A4-six-step-logic.md)
 
 ## 下一阶段
 
-本A4提交主目标为BENCH_TEST_SIXSTEP_LOGIC，默认全关，保留A0～A3回归。A5独立驱动测试代码另行版本管理；不直接推进母线上电或电机连接。
-
-## A4独立版本验证（2026-11-12）
-
-提交前从暂存区导出A4专用快照，不包含A5入口、单相API或A5测试文件。主目标宏BENCH_TEST_SIXSTEP_LOGIC，Keil V6.22完整Rebuild 0错误、0警告；Code=4616、RO=244、RW=12、ZI=1708 bytes。六步表、A4控制器及LKS560物理输出三套宿主测试全部通过。工作区A5配置与代码不受本次提交快照影响，未烧录。
-
-独立A4快照HEX SHA-256：`eb451ac772d26ade9d714c94d8ba744d1b804624656bfe13384de1f3cdc81007`；构建日志本地位置a4-only-version/A4-build.log。
+当前主目标为A5宏BENCH_TEST_GATE_DRIVER，默认全关，先验收单相低侧限时输出，再核实自举和有条件的高侧短包。A4宏BENCH_TEST_SIXSTEP_LOGIC保留用于回归，不直接推进母线上电或电机连接。

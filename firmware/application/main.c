@@ -8,19 +8,23 @@
  *
  * Opt-in define BENCH_TEST_MCPWM_THREE_PAIR: A3 CH0/1/2 P/N.
  * Opt-in define BENCH_TEST_SIXSTEP_LOGIC: A4 six-sector logic-only test.
+ * Opt-in define BENCH_TEST_GATE_DRIVER: A5 single-phase isolated gate checkout.
  *
- * Never energize the inverter power bus or connect the motor in A0/A1/A2/A3/A4.
+ * Never energize the inverter power bus or connect the motor in A0/A1/A2/A3/A4/A5.
  */
 #include <stdint.h>
 #include "lks32mc07x_lib.h"
 #include "board_init.h"
 
 #if (defined(BENCH_TEST_MCPWM_SINGLE) + defined(BENCH_TEST_MCPWM_COMPLEMENTARY) + \
-     defined(BENCH_TEST_MCPWM_THREE_PAIR) + defined(BENCH_TEST_SIXSTEP_LOGIC)) > 1
+     defined(BENCH_TEST_MCPWM_THREE_PAIR) + defined(BENCH_TEST_SIXSTEP_LOGIC) + \
+     defined(BENCH_TEST_GATE_DRIVER)) > 1
 #error "Select only one MCPWM bench test"
 #endif
 
-#if defined(BENCH_TEST_SIXSTEP_LOGIC)
+#if defined(BENCH_TEST_GATE_DRIVER)
+#include "test_gate_driver.h"
+#elif defined(BENCH_TEST_SIXSTEP_LOGIC)
 #include "test_sixstep_logic.h"
 #elif defined(BENCH_TEST_MCPWM_THREE_PAIR)
 #include "test_mcpwm_three_pair.h"
@@ -44,7 +48,12 @@ int main(void)
 {
     board_init_safe();
 
-#if defined(BENCH_TEST_SIXSTEP_LOGIC)
+#if defined(BENCH_TEST_GATE_DRIVER)
+    bench_gate_driver_init();
+    for (;;) {
+        bench_gate_driver_poll();
+    }
+#elif defined(BENCH_TEST_SIXSTEP_LOGIC)
     bench_sixstep_logic_init();
     for (;;) {
         /* A4 polls a hardware timebase; do not add A0-A3 busy delays. */
