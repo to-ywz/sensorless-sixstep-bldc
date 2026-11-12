@@ -1,5 +1,7 @@
 # V0.1-A1 — 单路 MCPWM 输出与按键启停验证
 
+> **2026-11-09 LKS560极性缺陷更正：** HIN高有效、LIN低有效；板级关断输入为P低/N高。旧版“六路全低”“P/N同时高代表上下管重叠”只属于历史MCU逻辑假设，不适用于本板驱动器。STOP/MOE默认态及A1～A4输出已修复，尚待硬件回归。测试时主母线断开；驱动电源关闭时先烧录并确认引脚，再按修复报告进行隔离供电复测。详见 `tests/reports/2026-11-09_FIX-LKS560-polarity.md`。
+
 - Status: **A1 PASSED — USER-CONFIRMED LOGIC-LEVEL ACCEPTANCE / NO POWER-STAGE VALIDATION**
 - 目标：只验证 MCU 的 P1.4 / CH0P 单路逻辑 PWM、START1/STOP1 按键启停及 GPIO 安全状态。
 - 禁止事项：不连接 FN550-90K；功率板直流母线必须断电；本测试不验证栅极驱动、三相互补、死区、过流保护或电机运行。

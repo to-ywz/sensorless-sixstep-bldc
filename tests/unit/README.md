@@ -10,3 +10,7 @@ gcc -std=c99 -Wall -Wextra -Werror -Itests/unit/fakes -Ifirmware/tests/bench -If
 ```
 
 The bench test executes the real polling controller with a fake timebase, buttons and output backend. It does not validate the MCPWM registers or physical output timing. Never add the fake SDK header directory to the firmware project.
+
+## LKS560 polarity regression
+
+Run `python tests/unit/run_lks560_tests.py --cc <gcc-path>` to run all three suites, including the actual A0-A4 physical-output sources against the host register model. It checks HIN=0/LIN=1 idle/STOP, sector-to-driver truth mapping, physical N inversion in A1-A3, and CH_DEF bypassing that inversion. No fake headers belong in firmware include paths. Hardware VGS, deadtime and reset-high-impedance are outside this model.

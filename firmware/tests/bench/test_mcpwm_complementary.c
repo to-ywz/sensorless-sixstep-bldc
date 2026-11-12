@@ -14,6 +14,8 @@
  */
 #include <stdint.h>
 #include "lks32mc07x_lib.h"
+#include "board_init.h"
+#include "lks560_pwm_defaults.h"
 #include "test_mcpwm_complementary.h"
 
 #define BENCH_MCPWM_PERIOD_COUNTS       2400u
@@ -96,7 +98,7 @@ void bench_mcpwm_complementary_init(void)
                       bench_button_read_pressed(BENCH_BUTTON_START_PIN));
     g_pwm_enabled = 0u;
 
-    /* board_init_safe() has already forced P1.4..P1.9 to GPIO-low. */
+    /* board_init_safe() has established HIN=0/LIN=1. */
     MCPWM_StructInit(&cfg);
 
     cfg.MCLK_EN = ENABLE;
@@ -116,13 +118,13 @@ void bench_mcpwm_complementary_init(void)
 
     /*
      * Both outputs are timer-controlled. In A1 CH0_NS was set to 1
-     * to force CH0N low; A2 deliberately leaves CH0_NS=0.
+     * to force its internal N request low (physical LIN high);
+     * A2 leaves CH0_NS=0 and inverts the hardware N waveform at the pad.
      */
     cfg.CH0_PS = DISABLE;
     cfg.CH0_NS = DISABLE;
 
     cfg.CH0P_Polarity_INV = DISABLE;
-    cfg.CH0N_Polarity_INV = DISABLE;
     cfg.Switch_CH0N_CH0P = DISABLE;
 
     /*
@@ -132,10 +134,7 @@ void bench_mcpwm_complementary_init(void)
     cfg.DeadTimeCH012N = BENCH_MCPWM_DEADTIME_COUNTS;
     cfg.DeadTimeCH012P = BENCH_MCPWM_DEADTIME_COUNTS;
 
-    cfg.CH0P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH0N_default_output = MCPWM0_LOW_LEVEL;
-
-    /* Keep the other four phase outputs statically low and unmuxed. */
+    /* Other phases stay OFF; N internal low is physically inverted high. */
     cfg.CH1_PS = ENABLE;
     cfg.CH1P_SCTRLP = MCPWM0_LOW_LEVEL;
     cfg.CH1_NS = ENABLE;
@@ -146,21 +145,19 @@ void bench_mcpwm_complementary_init(void)
     cfg.CH2_NS = ENABLE;
     cfg.CH2N_SCTRLN = MCPWM0_LOW_LEVEL;
 
-    cfg.CH1P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH1N_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH2P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH2N_default_output = MCPWM0_LOW_LEVEL;
-
     cfg.TR0_T0_UpdateEN = ENABLE;
     cfg.TR0_AEC = DISABLE;
 
+    /* N timer/software requests are active-high internally; invert only
+     * the physical N pad for LKS560's active-low LIN. CH_DEF bypasses it.
+     */
+    cfg.CH0N_Polarity_INV = cfg.CH1N_Polarity_INV = cfg.CH2N_Polarity_INV = ENABLE;
+    lks560_pwm_set_off_defaults(&cfg);
     MCPWM_Init(&cfg);
     PWMOutputs(DISABLE);
 
-    /* Keep the measured pair in GPIO-low mode until START1 is pressed. */
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_5, AF0_GPIO);
-    GPIO_ResetBits(GPIO1, GPIO_Pin_4 | GPIO_Pin_5);
+    /* Keep all driver inputs OFF until START1 is pressed. */
+    board_pwm_inputs_off();
 }
 
 void bench_mcpwm_complementary_enable(void)
@@ -180,11 +177,9 @@ void bench_mcpwm_complementary_enable(void)
 
 void bench_mcpwm_complementary_disable(void)
 {
-    /* Remove MCPWM output enable first; CH0P/CH0N default state is low. */
+    /* MOE clear selects physical HIN=0/LIN=1 before GPIO handover. */
     PWMOutputs(DISABLE);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_5, AF0_GPIO);
-    GPIO_ResetBits(GPIO1, GPIO_Pin_4 | GPIO_Pin_5);
+    board_pwm_inputs_off();
     g_pwm_enabled = 0u;
 }
 

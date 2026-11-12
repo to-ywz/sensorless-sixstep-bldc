@@ -435,6 +435,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
             </File>
+            <File>
+              <FileName>lks560_pwm_defaults.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks560_pwm_defaults.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -979,6 +984,11 @@
               <FileName>bench_sixstep_output.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks560_pwm_defaults.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks560_pwm_defaults.c</FilePath>
             </File>
           </Files>
         </Group>

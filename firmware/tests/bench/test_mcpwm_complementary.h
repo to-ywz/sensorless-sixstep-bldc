@@ -16,7 +16,7 @@ void bench_mcpwm_complementary_poll(void);
 /** @brief Enable CH0P/CH0N on P1.4/P1.5 for scope observation. */
 void bench_mcpwm_complementary_enable(void);
 
-/** @brief Disable MCPWM and restore P1.4/P1.5 as GPIO-low. */
+/** @brief Disable MCPWM and restore P1.4/P1.5 as GPIO HIN-low/LIN-high. */
 void bench_mcpwm_complementary_disable(void);
 
 #endif /* TEST_MCPWM_COMPLEMENTARY_H */

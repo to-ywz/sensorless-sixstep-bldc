@@ -1,5 +1,7 @@
 # LKS32MC071CBT8 引脚映射：V0.0 首轮原理图审计
 
+> **2026-11-09极性修复优先说明：** 本板LKS560为HIN高有效、LIN低有效，物理关断P低/N高。旧文中的六路低及高有效互补测量描述保留作历史说明；当前A1～A3将N输出反相，A4使用物理电平表。CH_DEF绕过普通极性，默认N必须单独设高。见 `tests/reports/2026-11-09_FIX-LKS560-polarity.md`。
+
 来源：
 - LKS_EVB_MCU071CBT8_V1.0.PDF，第 1 页
 - LKS_EVB_MVPOWPRE_V5.0.PDF，第 1 页
