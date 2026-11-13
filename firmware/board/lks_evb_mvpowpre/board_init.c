@@ -58,15 +58,15 @@ void board_init_safe(void)
 {
     __disable_irq();
 
-    board_pwm_inputs_off();
+    board_pwm_inputs_off(); // 初始化PWM通道信号输出
 
     /* Vendor SDK V3.16, internal oscillator: 48 MHz for A0 testing. */
-    SYS_MclkChoice(SYS_MCLK_48M_RC);
+    SYS_MclkChoice(SYS_MCLK_48M_RC); // 选择系统时钟为48MHz内部RC振荡器, PLL来源于内部8Mhz
 
     /* Bench-only policy: no unexpected watchdog reset in A0. */
-    IWDG_DISABLE();
+    IWDG_DISABLE(); // 防止仿真时看门狗复位, 实际使用需要开启
 
-    board_init_heartbeat();
+    board_init_heartbeat(); // 初始化心跳灯, 用于指示MCU工作状态
     __enable_irq();
 }
 

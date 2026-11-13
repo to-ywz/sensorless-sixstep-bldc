@@ -73,7 +73,8 @@ void bench_sixstep_output_init(void)
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
     while (SysTick->VAL == 0u) {}
     last_tick = SysTick->VAL;
-    elapsed_ticks = 0u;
+    elapsed_ticks = 0u;     // 重制控制时间轴
+
     MCPWM_StructInit(&cfg);
     cfg.MCLK_EN = ENABLE;
     cfg.CLK_DIV = 0u;
@@ -82,19 +83,22 @@ void bench_sixstep_output_init(void)
     cfg.TH00 = cfg.TH10 = cfg.TH20 = (uint16_t)(-600);
     cfg.TH01 = cfg.TH11 = cfg.TH21 = 600u;
     cfg.MCPWM_WorkModeCH0 = cfg.MCPWM_WorkModeCH1 =
-        cfg.MCPWM_WorkModeCH2 = MCPWM0_CENTRAL_PWM_MODE;
-    cfg.IO0_PPE = cfg.IO1_PPE = cfg.IO2_PPE = DISABLE;
+        cfg.MCPWM_WorkModeCH2 = MCPWM0_CENTRAL_PWM_MODE; // 中心对齐
+    cfg.IO0_PPE = cfg.IO1_PPE = cfg.IO2_PPE = DISABLE;  // 禁止推挽输出, 由外部驱动器控制
     cfg.CH0_PS = cfg.CH0_NS = cfg.CH1_PS = cfg.CH1_NS =
-        cfg.CH2_PS = cfg.CH2_NS = ENABLE;
+        cfg.CH2_PS = cfg.CH2_NS = ENABLE;               // 使能PWM输出
     cfg.CH0P_SCTRLP = cfg.CH1P_SCTRLP = cfg.CH2P_SCTRLP = MCPWM0_LOW_LEVEL;
-    cfg.CH0N_SCTRLN = cfg.CH1N_SCTRLN = cfg.CH2N_SCTRLN = MCPWM0_LOW_LEVEL;
+    cfg.CH0N_SCTRLN = cfg.CH1N_SCTRLN = cfg.CH2N_SCTRLN = MCPWM0_LOW_LEVEL; // 低电平有效
     cfg.CH0P_Polarity_INV = cfg.CH1P_Polarity_INV = cfg.CH2P_Polarity_INV = DISABLE;
-    cfg.CH0N_Polarity_INV = cfg.CH1N_Polarity_INV = cfg.CH2N_Polarity_INV = ENABLE;
-    lks560_pwm_set_off_defaults(&cfg);
-    cfg.DeadTimeCH012N = cfg.DeadTimeCH012P = 48u;
-    cfg.TR0_AEC = DISABLE;
-    cfg.TR0_T0_UpdateEN = DISABLE;
-    cfg.AUEN = 0u;
+    cfg.CH0N_Polarity_INV = cfg.CH1N_Polarity_INV = cfg.CH2N_Polarity_INV = ENABLE; // LKS560的LIN是低电平有效, 需要反相
+    lks560_pwm_set_off_defaults(&cfg);  
+    cfg.DeadTimeCH012N = cfg.DeadTimeCH012P = 48u;  // 死区时间设置为48个时钟周期, 约1us
+    
+    cfg.TR0_AEC = DISABLE;  
+    
+    cfg.TR0_T0_UpdateEN = DISABLE; 
+    cfg.AUEN = 0u; // 禁止自动更新, 由软件手动更新
+
     MCPWM_Init(&cfg);
     bench_sixstep_output_stop();
 }
