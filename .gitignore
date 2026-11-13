@@ -36,3 +36,6 @@ __pycache__/
 
 # Private original measurement photos and waveforms
 /hardware/measurements/raw/
+.vscode/c_cpp_properties.json
+.vscode/keil_project_properties.json
+.vscode/keil-assistant.log
