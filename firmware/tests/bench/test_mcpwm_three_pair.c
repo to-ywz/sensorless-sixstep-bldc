@@ -14,6 +14,8 @@
  */
 #include <stdint.h>
 #include "lks32mc07x_lib.h"
+#include "board_init.h"
+#include "lks560_pwm_defaults.h"
 #include "test_mcpwm_three_pair.h"
 
 #define BENCH_MCPWM_PERIOD_COUNTS       2400u
@@ -98,7 +100,7 @@ void bench_mcpwm_three_pair_init(void)
                       bench_button_read_pressed(BENCH_BUTTON_START_PIN));
     g_pwm_enabled = 0u;
 
-    /* board_init_safe() has already forced P1.4..P1.9 to GPIO-low. */
+    /* board_init_safe() has established HIN=0/LIN=1. */
     MCPWM_StructInit(&cfg);
 
     cfg.MCLK_EN = ENABLE;
@@ -119,21 +121,18 @@ void bench_mcpwm_three_pair_init(void)
     cfg.CH0_PS = DISABLE;
     cfg.CH0_NS = DISABLE;
     cfg.CH0P_Polarity_INV = DISABLE;
-    cfg.CH0N_Polarity_INV = DISABLE;
     cfg.Switch_CH0N_CH0P = DISABLE;
     cfg.MCPWM_WorkModeCH1 = MCPWM0_CENTRAL_PWM_MODE;
     cfg.IO1_PPE = DISABLE;
     cfg.CH1_PS = DISABLE;
     cfg.CH1_NS = DISABLE;
     cfg.CH1P_Polarity_INV = DISABLE;
-    cfg.CH1N_Polarity_INV = DISABLE;
     cfg.Switch_CH1N_CH1P = DISABLE;
     cfg.MCPWM_WorkModeCH2 = MCPWM0_CENTRAL_PWM_MODE;
     cfg.IO2_PPE = DISABLE;
     cfg.CH2_PS = DISABLE;
     cfg.CH2_NS = DISABLE;
     cfg.CH2P_Polarity_INV = DISABLE;
-    cfg.CH2N_Polarity_INV = DISABLE;
     cfg.Switch_CH2N_CH2P = DISABLE;
     /*
      * DTH00/DTH01 are shared by CH0/1/2 in the current SDK structure.
@@ -142,36 +141,19 @@ void bench_mcpwm_three_pair_init(void)
     cfg.DeadTimeCH012N = BENCH_MCPWM_DEADTIME_COUNTS;
     cfg.DeadTimeCH012P = BENCH_MCPWM_DEADTIME_COUNTS;
 
-    cfg.CH0P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH0N_default_output = MCPWM0_LOW_LEVEL;
-
-    cfg.CH1P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH1N_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH2P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH2N_default_output = MCPWM0_LOW_LEVEL;
-
-    /* MOE=0 must select the low defaults on every measured output. */
-    cfg.CH0P_FAIL_EN = ENABLE;
-    cfg.CH0N_FAIL_EN = ENABLE;
-    cfg.CH1P_FAIL_EN = ENABLE;
-    cfg.CH1N_FAIL_EN = ENABLE;
-    cfg.CH2P_FAIL_EN = ENABLE;
-    cfg.CH2N_FAIL_EN = ENABLE;
-
     cfg.TR0_T0_UpdateEN = ENABLE;
     cfg.TR0_AEC = DISABLE;
 
+    /* N timer/software requests are active-high internally; invert only
+     * the physical N pad for LKS560's active-low LIN. CH_DEF bypasses it.
+     */
+    cfg.CH0N_Polarity_INV = cfg.CH1N_Polarity_INV = cfg.CH2N_Polarity_INV = ENABLE;
+    lks560_pwm_set_off_defaults(&cfg);
     MCPWM_Init(&cfg);
     PWMOutputs(DISABLE);
 
-    /* Keep the six measured pads in GPIO-low mode until START1 is pressed. */
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_5, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_6, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_7, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_8, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_9, AF0_GPIO);
-    GPIO_ResetBits(GPIO1, BENCH_PWM_PINS);
+    /* Keep all driver inputs OFF until START1 is pressed. */
+    board_pwm_inputs_off();
 }
 
 void bench_mcpwm_three_pair_enable(void)
@@ -195,15 +177,9 @@ void bench_mcpwm_three_pair_enable(void)
 
 void bench_mcpwm_three_pair_disable(void)
 {
-    /* Remove MCPWM output enable first; all six outputs' default state is low. */
+    /* MOE clear selects physical HIN=0/LIN=1 before GPIO handover. */
     PWMOutputs(DISABLE);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_5, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_6, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_7, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_8, AF0_GPIO);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_9, AF0_GPIO);
-    GPIO_ResetBits(GPIO1, BENCH_PWM_PINS);
+    board_pwm_inputs_off();
     g_pwm_enabled = 0u;
 }
 

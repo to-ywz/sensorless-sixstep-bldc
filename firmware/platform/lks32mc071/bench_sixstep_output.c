@@ -1,5 +1,7 @@
 #include "lks32mc07x_lib.h"
 #include "board_pwm_pins.h"
+#include "board_init.h"
+#include "lks560_pwm_defaults.h"
 #include "sixstep_table.h"
 #include "bench_sixstep_output.h"
 
@@ -14,13 +16,21 @@
 /* Register basis: SDK V3.16 Include/lks32mc07x_user_manual.h and
  * user_manual/13_MCPWM.md, IO01/IO23, UPDATE, TCLK, FAIL012 and PRT.
  * Each channel occupies one byte; CH1/CH3 use the upper byte.
- * These words intentionally leave inversion, swap and work-mode bits zero.
+ * N inversion adapts the driver only AFTER internal active-high requests;
+ * swap and work-mode bits remain zero.
  */
 #define IO_CHANNEL_SHIFT       8u
 #define IO_UPPER_CHANNEL_MASK  (0xffu << IO_CHANNEL_SHIFT)
-#define IO_PAIR_LOW            (MCPWM0_IO01_CH0_NS_BIT | MCPWM0_IO01_CH0_PS_BIT)
-#define IO_HIGH_SIDE_PWM       MCPWM0_IO01_CH0_NS_BIT
-#define IO_LOW_SIDE_ON         (IO_PAIR_LOW | MCPWM0_IO01_CH0_SCTRLN_BIT)
+/* Center-aligned IO retains internal conflict protection even for software
+ * output (manual 13_MCPWM, IO control). Keep internal P/N requests mutually
+ * exclusive, then invert N at the pad for LKS560's active-low LIN.
+ * Bench: CH0=0x05 -> UP PWM (~24%), UN high. CH_DEF bypasses inversion.
+ */
+#define IO_SOFTWARE_PAIR       (MCPWM0_IO01_CH0_NS_BIT | MCPWM0_IO01_CH0_PS_BIT)
+#define IO_DRIVER_N_INVERT     MCPWM0_IO01_CH0_NP_BIT
+#define IO_PAIR_OFF            (IO_SOFTWARE_PAIR | IO_DRIVER_N_INVERT)
+#define IO_HIGH_SIDE_PWM       (MCPWM0_IO01_CH0_NS_BIT | IO_DRIVER_N_INVERT)
+#define IO_LOW_SIDE_ON         (IO_PAIR_OFF | MCPWM0_IO01_CH0_SCTRLN_BIT)
 #define UPDATE_CH012_THRESHOLDS (MCPWM0_UPDATE_TH00_UPDATE_BIT | \
                                 MCPWM0_UPDATE_TH01_UPDATE_BIT | \
                                 MCPWM0_UPDATE_TH10_UPDATE_BIT | \
@@ -48,17 +58,15 @@ static void blank_delay(void)
 }
 void bench_sixstep_output_stop(void)
 {
-    uint32_t pin;
+    /* CH_DEF first commands HIN=0/LIN=1 together; then GPIO preserves it. */
     PWMOutputs(DISABLE);
-    GPIO_ResetBits(GPIO1, BOARD_PWM_PIN_MASK);
-    for (pin=BOARD_PWM_FIRST_PIN; pin<=BOARD_PWM_LAST_PIN; ++pin)
-        GPIO_PinAFConfig(GPIO1, pin, AF0_GPIO);
+    board_pwm_inputs_off();
     __DSB();
 }
 void bench_sixstep_output_init(void)
 {
     MCPWM_InitTypeDef cfg;
-    /* board_init_safe() has configured all six pads as GPIO outputs low. */
+    /* board_init_safe() established HIN=0/LIN=1 before driver setup. */
     SysTick->CTRL = 0u;
     SysTick->LOAD = TICK_MASK;
     SysTick->VAL = 0u;
@@ -78,13 +86,11 @@ void bench_sixstep_output_init(void)
     cfg.IO0_PPE = cfg.IO1_PPE = cfg.IO2_PPE = DISABLE;
     cfg.CH0_PS = cfg.CH0_NS = cfg.CH1_PS = cfg.CH1_NS =
         cfg.CH2_PS = cfg.CH2_NS = ENABLE;
-    cfg.CH0P_SCTRLP = cfg.CH0N_SCTRLN = cfg.CH1P_SCTRLP =
-        cfg.CH1N_SCTRLN = cfg.CH2P_SCTRLP = cfg.CH2N_SCTRLN = MCPWM0_LOW_LEVEL;
-    cfg.CH0P_default_output = cfg.CH0N_default_output =
-        cfg.CH1P_default_output = cfg.CH1N_default_output =
-        cfg.CH2P_default_output = cfg.CH2N_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH0P_FAIL_EN = cfg.CH0N_FAIL_EN = cfg.CH1P_FAIL_EN =
-        cfg.CH1N_FAIL_EN = cfg.CH2P_FAIL_EN = cfg.CH2N_FAIL_EN = ENABLE;
+    cfg.CH0P_SCTRLP = cfg.CH1P_SCTRLP = cfg.CH2P_SCTRLP = MCPWM0_LOW_LEVEL;
+    cfg.CH0N_SCTRLN = cfg.CH1N_SCTRLN = cfg.CH2N_SCTRLN = MCPWM0_LOW_LEVEL;
+    cfg.CH0P_Polarity_INV = cfg.CH1P_Polarity_INV = cfg.CH2P_Polarity_INV = DISABLE;
+    cfg.CH0N_Polarity_INV = cfg.CH1N_Polarity_INV = cfg.CH2N_Polarity_INV = ENABLE;
+    lks560_pwm_set_off_defaults(&cfg);
     cfg.DeadTimeCH012N = cfg.DeadTimeCH012P = 48u;
     cfg.TR0_AEC = DISABLE;
     cfg.TR0_T0_UpdateEN = DISABLE;
@@ -92,22 +98,23 @@ void bench_sixstep_output_init(void)
     MCPWM_Init(&cfg);
     bench_sixstep_output_stop();
 }
-int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
+static int apply_requests(uint32_t pwm_phase, uint32_t sink_phase, uint32_t duty_permille)
 {
-    SixstepState state;
     uint32_t pin, i, io[3], width;
     int32_t half;
     /* Invalid inputs also remove the previous valid output immediately. */
     bench_sixstep_output_stop();
-    if (!sixstep_get(sector,&state) || !sixstep_duty_valid(duty_permille)) return 0;
+    if ((pwm_phase >= 3u && pwm_phase != 255u) ||
+        (sink_phase >= 3u && sink_phase != 255u) ||
+        pwm_phase == sink_phase || !sixstep_duty_valid(duty_permille)) return 0;
     blank_delay();
     /* SDK IO01/IO23 layout: NS bit2, PS bit3, N static level bit4.
-     * No inversion, exchange or push-pull. IO fields are not in UPDATE mask;
-     * writes occur with MOE cleared AND all measured pads held GPIO-low.
+     * N is inverted, no P/N exchange or push-pull. IO fields are not in UPDATE mask;
+     * writes occur with MOE cleared AND all measured pads held HIN=0/LIN=1.
      */
-    for (i=0u;i<3u;++i) io[i]=IO_PAIR_LOW; /* P/N forced low */
-    io[state.pwm_phase]=IO_HIGH_SIDE_PWM;       /* P timer, N forced low */
-    io[state.sink_phase]=IO_LOW_SIDE_ON;      /* P forced low, N forced high */
+    for (i=0u;i<3u;++i) io[i]=IO_PAIR_OFF; /* internal P/N=0/0 -> physical HIN/LIN=0/1 */
+    if (pwm_phase < 3u) io[pwm_phase]=IO_HIGH_SIDE_PWM;       /* internal P=timer, N=0 -> LIN high */
+    if (sink_phase < 3u) io[sink_phase]=IO_LOW_SIDE_ON;      /* internal P=0, N=1 -> LIN low */
     width=((2u*PERIOD+1u)*duty_permille+500u)/1000u;
     half=(int32_t)(width/2u);
     MCPWM0_PRT=MCPWM_WRITE_UNLOCK;
@@ -136,4 +143,23 @@ int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
     MCPWM0_FAIL012 |= MCPWM0_FAIL012_MOE_BIT; /* CH0/1/2 only; do not enable CH3/4/5. */
     MCPWM0_PRT=MCPWM_WRITE_LOCK;
     return 1;
+}
+
+int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
+{
+    SixstepState state;
+    if (!sixstep_get(sector, &state)) {
+        bench_sixstep_output_stop();
+        return 0;
+    }
+    return apply_requests(state.pwm_phase, state.sink_phase, duty_permille);
+}
+
+int bench_gate_output_apply(uint32_t phase, uint32_t high_pwm)
+{
+    if (phase >= 3u || high_pwm > 1u) {
+        bench_sixstep_output_stop();
+        return 0;
+    }
+    return apply_requests(high_pwm ? phase : 255u, high_pwm ? 255u : phase, 250u);
 }

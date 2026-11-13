@@ -1,5 +1,7 @@
 # V0.1-A3 — CH0/CH1/CH2 三组互补 PWM 逻辑验证
 
+> **2026-11-09 LKS560极性缺陷更正：** HIN高有效、LIN低有效；板级关断输入为P低/N高。旧版“六路全低”“P/N同时高代表上下管重叠”只属于历史MCU逻辑假设，不适用于本板驱动器。STOP/MOE默认态及A1～A4输出已修复，尚待硬件回归。测试时主母线断开；驱动电源关闭时先烧录并确认引脚，再按修复报告进行隔离供电复测。详见 `tests/reports/2026-11-09_FIX-LKS560-polarity.md`。
+
 - **Status: PASS — USER-REPORTED LOGIC BENCH / REPRESENTATIVE PHOTOS ARCHIVED**
 - **Milestone:** V0.1
 - **Predecessor:** V0.1-A2（单组 CH0P/CH0N 互补输出，用户确认逻辑功能通过）

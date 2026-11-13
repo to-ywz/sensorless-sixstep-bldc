@@ -5,7 +5,7 @@
  * Hardware: LKS32MC071CBT8 + LKS_EVB_MVPOWPRE_V5.0.
  * Motor and inverter DC bus MUST remain disconnected.
  * Only P1.4 (CH0P / UP) is switched to MCPWM alternate function.
- * P1.5-P1.9 remain GPIO outputs at low level from board_init_safe().
+ * Inactive pads remain at LKS560 OFF levels: HIN low, LIN high.
  *
  * Buttons from the power-board schematic:
  *   START1 -> MCU P2.11, active low, 10k pull-up to +5V, 100nF to GND.
@@ -16,6 +16,8 @@
  */
 #include <stdint.h>
 #include "lks32mc07x_lib.h"
+#include "board_init.h"
+#include "lks560_pwm_defaults.h"
 #include "test_mcpwm_single.h"
 
 /*
@@ -110,7 +112,7 @@ void bench_mcpwm_single_init(void)
                       bench_button_read_pressed(BENCH_BUTTON_START_PIN));
     g_pwm_enabled = 0u;
 
-    /* A0 GPIO low state must already be established. */
+    /* board_init_safe() has established LKS560 OFF levels. */
     MCPWM_StructInit(&cfg);
 
     cfg.MCLK_EN = ENABLE;
@@ -124,7 +126,7 @@ void bench_mcpwm_single_init(void)
     cfg.MCPWM_WorkModeCH0 = MCPWM0_CENTRAL_PWM_MODE;
     cfg.TR0_T0_UpdateEN = ENABLE;
 
-    /* All inactive channels use the software-selected low state. */
+    /* Inactive internal requests are low; N pads are inverted to LIN high. */
     cfg.CH0_NS = 1u;
     cfg.CH0N_SCTRLN = MCPWM0_LOW_LEVEL;
     cfg.CH1_PS = 1u;
@@ -136,25 +138,22 @@ void bench_mcpwm_single_init(void)
     cfg.CH2_NS = 1u;
     cfg.CH2N_SCTRLN = MCPWM0_LOW_LEVEL;
 
-    cfg.CH0P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH0N_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH1P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH1N_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH2P_default_output = MCPWM0_LOW_LEVEL;
-    cfg.CH2N_default_output = MCPWM0_LOW_LEVEL;
-
     /* A1 observes CH0P only; disable P/N push-pull alternation. */
     cfg.IO0_PPE = DISABLE;
 
     /* No FAIL/BKIN and no power-stage protection is tested in A1. */
     cfg.TR0_AEC = DISABLE;
 
+    /* N timer/software requests are active-high internally; invert only
+     * the physical N pad for LKS560's active-low LIN. CH_DEF bypasses it.
+     */
+    cfg.CH0N_Polarity_INV = cfg.CH1N_Polarity_INV = cfg.CH2N_Polarity_INV = ENABLE;
+    lks560_pwm_set_off_defaults(&cfg);
     MCPWM_Init(&cfg);
     PWMOutputs(DISABLE);
 
-    /* Keep P1.4 in GPIO-low mode until START1 is pressed. */
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4, AF0_GPIO);
-    GPIO_ResetBits(GPIO1, GPIO_Pin_4);
+    /* Keep all driver inputs OFF until START1 is pressed. */
+    board_pwm_inputs_off();
 }
 
 void bench_mcpwm_single_enable(void)
@@ -175,10 +174,9 @@ void bench_mcpwm_single_enable(void)
 
 void bench_mcpwm_single_disable(void)
 {
-    /* First stop PWM hardware, then restore low GPIO output mode. */
+    /* First clear MOE, then preserve physical HIN=0/LIN=1 in GPIO mode. */
     PWMOutputs(DISABLE);
-    GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4, AF0_GPIO);
-    GPIO_ResetBits(GPIO1, GPIO_Pin_4);
+    board_pwm_inputs_off();
     g_pwm_enabled = 0u;
 }
 

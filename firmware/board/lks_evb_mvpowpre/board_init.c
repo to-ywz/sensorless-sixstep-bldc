@@ -6,40 +6,38 @@
  * Six gate input signals are on P1.4..P1.9.
  * P0.6 is the LED1/test net on the MCU control board.
  *
- * GPIO low is a TEST CONDITION, NOT PROVEN POWER-STAGE SAFETY.
+ * HIN-low/LIN-high is the LKS560 software OFF command.
+ * Reset/high-impedance and actual VGS remain separate hardware test items.
  * Do not power the inverter until LKS560 inputs, startup states,
  * and MCPWM dead-time are verified separately.
  */
 #include "lks32mc07x_lib.h"
 #include "board_init.h"
+#include "board_pwm_pins.h"
 
-#define BOARD_PWM_IO_MASK   (GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | \
-                             GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9)
 #define BOARD_HEARTBEAT_IO  (GPIO_Pin_6)
 
-static void board_force_pwm_pads_low(void)
+void board_pwm_inputs_off(void)
 {
     GPIO_InitTypeDef gpio;
     unsigned int pin;
 
     SYS_ModuleClockCmd(SYS_Module_GPIO, ENABLE);
 
-    /*
-     * Preload GPIO output latches before making pads outputs.
-     * Do not select AF3_MCPWM in the A0 test.
+    /* Preload OFF before changing mux/direction. Callers must clear MOE
+     * first if MCPWM is active; otherwise muxing one pad at a time could
+     * expose an intermediate command. LKS560 OFF is HIN=0, LIN=1.
      */
-    for (pin = 4u; pin <= 9u; ++pin) {
+    GPIO_ResetBits(GPIO1, BOARD_PWM_HIGH_SIDE_PINS);
+    GPIO_SetBits(GPIO1, BOARD_PWM_LOW_SIDE_PINS);
+    for (pin = BOARD_PWM_FIRST_PIN; pin <= BOARD_PWM_LAST_PIN; ++pin) {
         GPIO_PinAFConfig(GPIO1, pin, AF0_GPIO);
     }
-
-    GPIO_ResetBits(GPIO1, BOARD_PWM_IO_MASK);
-
     GPIO_StructInit(&gpio);
-    gpio.GPIO_Pin = BOARD_PWM_IO_MASK;
+    gpio.GPIO_Pin = BOARD_PWM_PIN_MASK;
     gpio.GPIO_Mode = GPIO_Mode_OUT;
     gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(GPIO1, &gpio);
-    GPIO_ResetBits(GPIO1, BOARD_PWM_IO_MASK);
 }
 
 static void board_init_heartbeat(void)
@@ -60,7 +58,7 @@ void board_init_safe(void)
 {
     __disable_irq();
 
-    board_force_pwm_pads_low();
+    board_pwm_inputs_off();
 
     /* Vendor SDK V3.16, internal oscillator: 48 MHz for A0 testing. */
     SYS_MclkChoice(SYS_MCLK_48M_RC);

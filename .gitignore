@@ -39,3 +39,6 @@ __pycache__/
 .vscode/c_cpp_properties.json
 .vscode/keil_project_properties.json
 .vscode/keil-assistant.log
+
+# Local vendor schematics: private reference copies, not for publication
+/hardware/schematics/private/

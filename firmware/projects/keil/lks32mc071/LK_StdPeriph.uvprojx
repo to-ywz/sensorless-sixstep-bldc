@@ -339,7 +339,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>BENCH_TEST_SIXSTEP_LOGIC</Define>
+              <Define>BENCH_TEST_GATE_DRIVER</Define>
               <Undefine></Undefine>
               <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre;..\..\..\tests\bench;..\..\..\motor\commutation;..\..\..\platform\lks32mc071</IncludePath>
             </VariousControls>
@@ -426,6 +426,11 @@
               <FilePath>..\..\..\tests\bench\test_sixstep_logic.c</FilePath>
             </File>
             <File>
+              <FileName>test_gate_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_gate_driver.c</FilePath>
+            </File>
+            <File>
               <FileName>sixstep_table.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
@@ -434,6 +439,11 @@
               <FileName>bench_sixstep_output.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks560_pwm_defaults.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks560_pwm_defaults.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -971,6 +981,11 @@
               <FilePath>..\..\..\tests\bench\test_sixstep_logic.c</FilePath>
             </File>
             <File>
+              <FileName>test_gate_driver.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench\test_gate_driver.c</FilePath>
+            </File>
+            <File>
               <FileName>sixstep_table.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
@@ -979,6 +994,11 @@
               <FileName>bench_sixstep_output.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks560_pwm_defaults.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks560_pwm_defaults.c</FilePath>
             </File>
           </Files>
         </Group>
