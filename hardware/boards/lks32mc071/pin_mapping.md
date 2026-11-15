@@ -6,7 +6,7 @@
 - LKS_EVB_MCU071CBT8_V1.0.PDF，第 1 页
 - LKS_EVB_MVPOWPRE_V5.0.PDF，第 1 页
 
-标记：SCHEMATIC_CONFIRMED 表示原理图已确认；TESTED 仅限实物测量完成。本文所有项目尚未标为 TESTED。
+标记：SCHEMATIC_CONFIRMED 表示原理图已确认；TESTED 仅限关联实测证据支持的功能/工况。**本表仍是原理图映射基线，不应将全部项目笼统理解为未测试或全部通过**：A1～A5 已有部分逻辑及 Gate 实测报告，详见 `tests/reports/`；CMP1→FAIL1、逐波过流、BEMF/ADC 采样仍未通过相应实测验收。
 
 ## 六路 MCPWM
 
@@ -23,7 +23,7 @@
 
 ## START1 / STOP1 按键
 
-依据：LKS_EVB_MVPOWPRE_V5.0.PDF「按键」电路，以及 LKS_EVB_MCU071CBT8_V1.0.PDF 的 MCU 引脚与 P1 连接器映射。原理图确认，尚未标记为实物 TESTED。
+依据：LKS_EVB_MVPOWPRE_V5.0.PDF「按键」电路，以及 LKS_EVB_MCU071CBT8_V1.0.PDF 的 MCU 引脚与 P1 连接器映射。此处电路拓扑依据原理图；START/STOP 的部分功能已在 A1～A5 台架中试过，但不等于所有开关机、故障及延迟指标通过。
 
 | 按键 | 功率板 P1 连接器 | 核心板 P1 连接器 | MCU GPIO | 有效电平 | 外部电路 |
 |---|---:|---:|---|---|---|
@@ -48,7 +48,7 @@ A1 台架控制约定：
 | V 相 BEMF | PV | P0.12（14） | ADC1_CH12 / CMP0_IP2 | P1-3 |
 | W 相 BEMF | PW | P0.11（13） | ADC1_CH11 / CMP0_IP1 | P1-17 |
 | OC | OC | P2.1（41） | CMP1_IP0 / ADC1_CH10 | P2-4 |
-| 母线采样 | Vol_ADC | P2.9（37） | ADC0_CH12 | P2-3 |
+| 辅助输入 DM_In 采样（非独立主母线） | Vol_ADC | P2.9（37） | ADC0_CH12 | P2-3 |
 
 ## OPA 输入（仅追踪到 MCU 输入，内部放大倍数 TBD）
 
@@ -65,9 +65,9 @@ A1 台架控制约定：
 
 这两处是原理图网络名不一致，不代表已确认电气短路。需要断电通断核验，当前不应占用这些引脚实现新的功能。
 
-## 下一步
+## 当前未完成的板级验收
 
-1. 断电确认 P1 的 6 路 PWM 和 P2 关键网络是否一一对应。
-2. 低能量验证 PWM 使能、安全关断和死区。
-3. 检验 ADC BEMF 通道和内部 CMP 路由。
-4. 核实 OC 是否存在无 CPU 参与的硬件关断路径。
+1. 核对 P1/P2 关键网络实物修订和跨板连接器的标注差异；A1～A5 部分逻辑/Gate 实测仅覆盖记录的工况。
+2. 对高低侧实际栅极非重叠、复位/掉电默认态及器件输入尖峰保留未通过项，以对应 A5 报告为准。
+3. V0.2 验证 BEMF/ADC 与 CMP1→FAIL1 的内部硬件保护功能；不存在先拆 Hall 电路或飞线的前提。
+4. 下版兼容单/双/三 Shunt 的功率装配与校验详见 [next_revision.md](next_revision.md)。
