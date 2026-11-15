@@ -25,4 +25,5 @@
 | ID | 问题 | 当前状态 | 处理方向 |
 |---|---|---|---|
 | [HW-001](HW-001-mcpwm-edge-ringing.md) | MCPWM 输出边沿振铃、负向过冲 | RECORD ONLY / DEFERRED | 保留实测数据；出现相关问题或下一版底板评审时再关联分析 |
+| [HW-002](HW-002-powerdown-gate-discharge.md) | DM_In 掉电时 +15V/+5V 衰减、受测下管 VGS 渐降与残压 | OPEN | 先核对供电/输入默认态与 UVLO，再设计低能量定量验证；不放行带功率测试 |
 
