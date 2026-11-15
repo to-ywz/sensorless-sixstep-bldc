@@ -1,3 +1,12 @@
 # Test Reports
 
-每个测试报告使用 test_report_template.md，并引用 Test ID。只提交脱敏后的证据。原始示波器文件和现场日志默认保存在私有存储。
+每个测试报告使用 [test_report_template.md](test_report_template.md) 并引用 Test ID。只提交脱敏后的证据；原始示波器文件和现场日志默认保存在私有存储，不把报告中的SHA索引等同于文件已经上传。
+
+## 当前阶段的唯一入口
+
+- [A5验收现况、全部证据与遗留问题](2026-11-15_V01-A5-progress.md)
+- [2026-11-16 输入逻辑/导通中掉电新观测](2026-11-16_V01-A5-input-interlock-powerdown.md)
+- [2026-11-16 A5隔离构建检查](2026-11-16_V01-A5-version-check.md)
+- [V0.2（计划，尚未实现）](../test_cases/V02-PLAN-000-workplan.md)
+
+各历史报告只负责所属阶段的数据和条件，不因时间顺序较早而被自动当作当前状态。
