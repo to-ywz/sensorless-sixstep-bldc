@@ -3,7 +3,7 @@
 #include "lks32mc07x_lib.h"
 #include "bench_sixstep_output.h"
 #include "test_gate_driver.h"
-static uint32_t now, start_pressed, stop_pressed, phase=255u, high, reject;
+static uint32_t now, start_pressed, stop_pressed, phase=255u, high, reject, apply_cost;
 void GPIO_PinAFConfig(uint32_t a,uint32_t b,uint32_t c){(void)a;(void)b;(void)c;}
 void GPIO_StructInit(GPIO_InitTypeDef *p){p->GPIO_Pin=p->GPIO_Mode=p->GPIO_PuPd=0;}
 void GPIO_Init(uint32_t a,GPIO_InitTypeDef *p){(void)a;(void)p;}
@@ -17,12 +17,12 @@ int bench_gate_output_apply(uint32_t p,uint32_t h)
 {
     bench_sixstep_output_stop();
     if(reject||stop_pressed||p>2u||h>1u)return 0;
-    phase=p;high=h;return 1;
+    phase=p;high=h;now+=apply_cost;return 1;
 }
 static void poll(uint32_t us){now+=us;bench_gate_driver_poll();}
 static void command(uint32_t c){g_a5_command=c;poll(0);}
 static void init(uint32_t held)
-{now=0u;start_pressed=held;stop_pressed=reject=0u;bench_gate_driver_init();}
+{now=0u;start_pressed=held;stop_pressed=reject=apply_cost=0u;bench_gate_driver_init();}
 static void button(uint32_t pressed)
 {start_pressed=pressed;poll(0);poll(20000u);}
 static void assert_off(void){assert(g_a5_state==0u&&phase==255u);}
@@ -69,6 +69,17 @@ int main(void)
     init(0);start_high(0);poll(1000);poll(1051);assert_off();assert(g_a5_fault==5);
     init(0);now=0xffffff00u;start_high(2);poll(1000);poll(50);poll(200);
     assert_off();assert(g_a5_completed==1); /* uint32 time wrap */
+    /* Measured backend work must not be counted as the configured gap.
+     * Diagnostics survive STOP, reset per RUN, and handle counter wrap. */
+    init(0);now=0xfffffff0u;apply_cost=17u;start_high(0);
+    assert(g_a5_timing_valid==0u && g_a5_timing_ticks_per_us==1u);
+    poll(1000);assert(g_a5_timing_valid==1u);
+    poll(63);assert(g_a5_gap_ticks==63u && g_a5_apply_ticks==17u);
+    assert(g_a5_timing_valid==7u);poll(205);assert_off();
+    assert(g_a5_packet_ticks==205u && g_a5_timing_valid==15u);
+    command(2);assert(g_a5_timing_valid==15u);
+    start_high(0);assert(g_a5_timing_valid==0u && g_a5_apply_ticks==0u);
+    command(2);assert(g_a5_timing_valid==0u);
     puts("PASS: A5 defaults, all phases, finite packets, STOP priority, bootstrap config, late polling, invalid inputs, tick wrap");
     return 0;
 }

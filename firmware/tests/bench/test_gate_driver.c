@@ -7,6 +7,11 @@
 
 volatile uint32_t g_a5_phase, g_a5_test, g_a5_command, g_a5_bootstrap_checked;  // 仿真修改数值
 volatile uint32_t g_a5_state, g_a5_fault, g_a5_completed;
+/* Raw SysTick deltas: divide by g_a5_timing_ticks_per_us for nominal us.
+ * Observations only; no printf, breakpoint or extra delay in the packet. */
+volatile uint32_t g_a5_timing_ticks_per_us, g_a5_timing_valid;
+volatile uint32_t g_a5_stop_ticks, g_a5_gap_ticks, g_a5_apply_ticks;
+volatile uint32_t g_a5_packet_ticks;
 static uint32_t active_phase, active_test, active_checked, entered_at;
 static uint32_t candidate, stable, changed_at;
 static uint8_t start_armed;
@@ -21,10 +26,15 @@ static void stop(uint32_t fault)
 }
 static int output(uint32_t high)
 {
+    uint32_t begin=bench_sixstep_clock();
     if (!bench_gate_output_apply(active_phase, high)) {
         stop(3u); return 0;
     }
     entered_at=bench_sixstep_clock();
+    if (high) {
+        g_a5_apply_ticks=(uint32_t)(entered_at-begin);
+        g_a5_timing_valid|=4u;
+    }
     return 1;
 }
 void bench_gate_driver_init(void)
@@ -42,6 +52,9 @@ void bench_gate_driver_init(void)
     bench_sixstep_output_init(); // 初始化六路PWM输出
     g_a5_phase=g_a5_test=g_a5_command=g_a5_bootstrap_checked=0u;
     g_a5_state=g_a5_fault=g_a5_completed=0u;
+    g_a5_timing_ticks_per_us=bench_sixstep_ticks_per_ms()/1000u;
+    g_a5_timing_valid=0u;
+    g_a5_stop_ticks=g_a5_gap_ticks=g_a5_apply_ticks=g_a5_packet_ticks=0u;
 
 
     candidate=stable=(GPIO_ReadInputDataBit(GPIO2,GPIO_Pin_11)==0u);
@@ -75,6 +88,8 @@ void bench_gate_driver_poll(void)
         if (g_a5_test==1u && !(g_a5_bootstrap_checked&(1u<<g_a5_phase))) {
             stop(2u);return;
         } 
+        g_a5_timing_valid=0u;
+        g_a5_stop_ticks=g_a5_gap_ticks=g_a5_apply_ticks=g_a5_packet_ticks=0u;
         active_phase=g_a5_phase;active_test=g_a5_test;
         active_checked=g_a5_bootstrap_checked;g_a5_fault=0u;
         if (output(0u)) g_a5_state=active_test?PRECHARGE:LOW_HOLD;
@@ -89,6 +104,10 @@ void bench_gate_driver_poll(void)
     if (elapsed<limit) return;
     
     if (g_a5_state==LOW_HOLD || g_a5_state==HIGH_PACKET) {
+        if (g_a5_state==HIGH_PACKET) {
+            g_a5_packet_ticks=elapsed;
+            g_a5_timing_valid|=8u;
+        }
         stop(0u);++g_a5_completed;return;
     } // 检测到PWM输出时间已到, 停止输出
 
@@ -97,9 +116,15 @@ void bench_gate_driver_poll(void)
      */
     if (elapsed-limit>ms) {stop(5u);return;} // 软件超时保护，防止单个状态轮询时等待超时
     if (g_a5_state==PRECHARGE) {
+        uint32_t begin=bench_sixstep_clock();
         bench_sixstep_output_stop();
-        entered_at=bench_sixstep_clock();g_a5_state=ALL_OFF_GAP; // 预充完毕
+        entered_at=bench_sixstep_clock();
+        g_a5_stop_ticks=(uint32_t)(entered_at-begin);
+        g_a5_timing_valid|=1u;
+        g_a5_state=ALL_OFF_GAP; // 预充完毕
     } else if (g_a5_state==ALL_OFF_GAP) {
+        g_a5_gap_ticks=(uint32_t)(bench_sixstep_clock()-entered_at);
+        g_a5_timing_valid|=2u;
         if (output(1u)) g_a5_state=HIGH_PACKET; // 间隔时间完毕，准备脉冲
     } else stop(1u); // 
 }

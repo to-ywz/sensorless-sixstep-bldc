@@ -70,3 +70,23 @@ A4混合输出缺陷及三相/低侧功能回归已有用户确认；原计划�
 A5新入口先验收：默认全关→三相低侧单独开启/关闭→STOP/非法参数→自举电压→有条件的高侧短包。旧A4下低侧正常结果不自动等同于新A5程序已实测。本轮不接电机，不恢复母线，不关闭CMP1保护及高侧栅极的未测项目。
 
 来源：厂家LKS560手册1.3/2.2/表5-2（厂家文件镜像）https://xonstorage.z8.web.core.windows.net/pdf/linkosemiconductor_lks560_apr22_xonlink.pdf 。本板自举D1/D2/D5、C28/C29/C30及供电路径见私有原理图索引，不公开分发原图/手册。
+
+## 2026-11-14：202µs交接定位诊断
+
+新增A5专用Watch观测量，不改变1ms预充、50µs全关等待、200µs短包参数，不记录日志或在运行中设置断点。增加时间读取会轻微扰动时序，不能将新旧波形视为完全相同。
+
+保持原供电与接线条件（母线实测0V、电机断开），编译下载BENCH_TEST_GATE_DRIVER。只需U相：phase=0、test=1、bootstrap_checked=1，执行一次RUN，等待短包自动结束后读取：
+
+| Watch变量 | 含义 |
+|---|---|
+| g_a5_timing_ticks_per_us | 原始tick/µs，当前名义48 |
+| g_a5_timing_valid | 完整自动短包结束应为15；提前STOP会只保留已完成阶段 |
+| g_a5_stop_ticks | 预充退出时stop函数耗时，不等于引脚边沿时刻 |
+| g_a5_gap_ticks | stop返回后到高侧apply前的软件全关等待，含轮询延后 |
+| g_a5_apply_ticks | 高侧输出apply调用耗时，含其内部stop、配置及保护等待 |
+| g_a5_packet_ticks | apply返回到短包到期被处理的时间，不是首末脉冲间隔 |
+| g_a5_fault / g_a5_completed | 正常为fault=0，completed增加1 |
+
+所有*_ticks除以timing_ticks_per_us得到名义µs；请提供原始整数即可。完整运行后记录一次，STOP不清记录，下次接受RUN会清零。valid位1/2/4/8分别表示stop/gap/apply/packet结果有效；故障或提前停止时不使用无效字段。
+
+判读：gap接近50µs但apply很长，定位后端；gap本身明显偏长，定位轮询/调试暂停；两者加上stop仍不足解释输入端间隔，则继续查PWM使能到首边沿及更新行为。现版本没有采集硬件MOE放行时刻或首边沿时间戳，不能用这些变量直接证明首周期延迟。避免在执行期间单步或暂停；读取静止后的Watch结果。

@@ -15,4 +15,12 @@ extern volatile uint32_t g_a5_state, g_a5_fault, g_a5_completed;
  * Faults:0=none,1=bad input,2=bootstrap not checked,3=output rejected,
  * 4=configuration changed while active,5=excessive precharge/gap lateness.
  */
+/* Diagnostics: valid bits 1=precharge stop,2=gap,4=high apply,8=packet expiry.
+ * Raw unsigned tick deltas, preserved after STOP; reset on next accepted RUN.
+ * Packet duration starts after apply returns, not at first physical edge.
+ * Apply duration includes GPIO/config/guards; excludes first-edge wait after return.
+ */
+extern volatile uint32_t g_a5_timing_ticks_per_us, g_a5_timing_valid;
+extern volatile uint32_t g_a5_stop_ticks, g_a5_gap_ticks, g_a5_apply_ticks;
+extern volatile uint32_t g_a5_packet_ticks;
 #endif
