@@ -7,6 +7,7 @@
 - [A5验收现况、全部证据与遗留问题](2026-11-15_V01-A5-progress.md)
 - [2026-11-16 输入逻辑/导通中掉电新观测](2026-11-16_V01-A5-input-interlock-powerdown.md)
 - [2026-11-16 A5隔离构建检查](2026-11-16_V01-A5-version-check.md)
-- [V0.2（计划，尚未实现）](../test_cases/V02-PLAN-000-workplan.md)
+- [V02-00静态审计、资料冲突及隔离P0–P4补充](2026-11-16_V02-00-static-audit.md)
+- [V0.2（保护尚未实现）](../test_cases/V02-PLAN-000-workplan.md)
 
 各历史报告只负责所属阶段的数据和条件，不因时间顺序较早而被自动当作当前状态。
