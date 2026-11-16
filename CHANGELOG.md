@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Design decision（2026-11-16）
+- 用户确认V0.2双级保护架构：**一级CBC逐波限流**负责本PWM周期截断和后续安全周期受控恢复；**二级严重故障锁存**负责持续/严重异常的停机与显式恢复。V02-01先在锁存模式验证CMP1→FAIL1异步硬件关断，不能将其当作CBC或V0.2最终PASS。
+- CMP1仅一路输入和FAIL自动恢复实际能力仍需核实；两级故障源、阈值与同步恢复机制均TBD，尚未写入固件/上板验证。更新[总计划](tests/test_cases/V02-PLAN-000-workplan.md)、[首轮保护链](tests/test_cases/V02-PROT-001-internal-path-plan.md)、[完整逐波验收](tests/test_cases/V02-PROT-001-cycle-current-limit.md)。
+
 ### Documentation / planning（2026-11-16）
 - 将A5验收用例整理为单一状态矩阵：[A5验收](tests/test_cases/V01-A5-driver-interface-gate.md)与[当前证据表](tests/reports/2026-11-15_V01-A5-progress.md)。保留原始分阶段报告/截图哈希，不合并或覆写历史证据。
 - 分清U/V/W HIN/LIN输入非重叠、Gate对地约202µs、复位稳定VGS、六管**停止状态**电源循环和U相下管**导通中**掉电；这些不是同一次/同一种测试。
