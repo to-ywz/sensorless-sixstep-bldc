@@ -8,6 +8,7 @@
 - [2026-11-16 输入逻辑/导通中掉电新观测](2026-11-16_V01-A5-input-interlock-powerdown.md)
 - [2026-11-16 A5隔离构建检查](2026-11-16_V01-A5-version-check.md)
 - [V02-00静态审计、资料冲突及隔离P0–P4补充](2026-11-16_V02-00-static-audit.md)
+- [V02-01平台接口、寄存器预期值与锁存状态机设计（未实现/未测试）](../test_cases/V02-01-platform-interface-state-machine.md)
 - [V0.2（保护尚未实现）](../test_cases/V02-PLAN-000-workplan.md)
 
 各历史报告只负责所属阶段的数据和条件，不因时间顺序较早而被自动当作当前状态。

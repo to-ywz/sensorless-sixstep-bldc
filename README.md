@@ -8,7 +8,7 @@
 
 > **当前状态（2026-11-16）：V0.1-A5 隔离台架的三相低侧、三相自举及高侧短包、复位后无持续误开启、停止状态六管电源循环已有实测/用户反馈；A5整体仍为PARTIAL PASS。** 输入峰值合规[HW-001](hardware/issues/HW-001-mcpwm-edge-ringing.md)、掉电关断[HW-002](hardware/issues/HW-002-powerdown-gate-discharge.md)、实际双VGS瞬态非重叠及板载固件指纹尚未关闭。详见[A5唯一进度表](tests/reports/2026-11-15_V01-A5-progress.md)。
 >
-> **V0.2已完成可访问资料的V02-00静态审计（原版资料冲突仍开放），保护Bench尚未实现/实测**：优先无主母线的CMP1_RAW→MCPWM FAIL1逻辑级关断，再做ADC/OPA可信性、六扇区覆盖和真正逐波动作/恢复验证。见[V02-00审计](tests/reports/2026-11-16_V02-00-static-audit.md)及[V0.2总计划](tests/test_cases/V02-PLAN-000-workplan.md)。CMP/Fail尚未实现或实测，不能上主功率母线或接电机。
+> **V02-00静态审计完成；V02-01平台接口与锁存状态机设计已归档，但固件/Bench仍未实现、未构建、未实测。** 下一步先处理FCLK门控编号、FAIL滤波时钟和CMP窗口关闭语义，再实现独立逻辑Bench。见[V02-00审计](tests/reports/2026-11-16_V02-00-static-audit.md)、[V02-01接口/状态机设计](tests/test_cases/V02-01-platform-interface-state-machine.md)及[V0.2总计划](tests/test_cases/V02-PLAN-000-workplan.md)。CMP/FAIL尚未实测，不接主功率母线或电机。
 
 ## 1. 项目目标（Target V1.0）
 
@@ -133,7 +133,7 @@ tools/         波形、日志和仿真辅助工具说明
 | A4 六步逻辑 | 主要功能已测，定量项保留 | [A4报告](tests/reports/2026-11-09_V01-A4-six-step-logic.md) |
 | A5 驱动台架 | 主要功能正常、**安全验收开放** | [A5当前证据矩阵](tests/reports/2026-11-15_V01-A5-progress.md)、[A5验收要求](tests/test_cases/V01-A5-driver-interface-gate.md) |
 | 硬件遗留问题 | HW-001记录保留，HW-002开放 | [问题列表](hardware/issues/README.md) |
-| V0.2 采样/逐波保护 | **V02-00静态审计完成；资料疑点开放，保护未实现/未实测** | [审计记录](tests/reports/2026-11-16_V02-00-static-audit.md)、[阶段计划](tests/test_cases/V02-PLAN-000-workplan.md)、[内部保护链P0-P4](tests/test_cases/V02-PROT-001-internal-path-plan.md) |
+| V0.2 采样/逐波保护 | **V02-00静态审计完成；V02-01设计已归档；固件/Bench未实现/未实测** | [审计记录](tests/reports/2026-11-16_V02-00-static-audit.md)、[V02-01接口/状态机设计](tests/test_cases/V02-01-platform-interface-state-machine.md)、[阶段计划](tests/test_cases/V02-PLAN-000-workplan.md)、[内部保护链P0-P4](tests/test_cases/V02-PROT-001-internal-path-plan.md) |
 | 自研下一版PCB | 单/双/三Shunt兼容为候选，不代表当前跳帽可改变功率拓扑 | [下一版板卡设计评审](hardware/boards/lks32mc071/next_revision.md) |
 
 **放行规则：** A5未关闭的安全风险不妨碍V0.2控制板**隔离逻辑级**研究；未取得保护闭环及功率级安全证据前，不接主母线/电机。V0.2逻辑级测试必须避免MCU向**未供电且仍相连的LKS560输入**施加超允许电压。

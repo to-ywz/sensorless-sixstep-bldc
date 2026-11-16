@@ -1,8 +1,8 @@
 # V0.2 — 采样可信性与硬件过流关断：阶段执行计划
 
 - **规划日期：2026-11-16**
-- **Status：V02-00 STATIC REVIEW COMPLETE / SOURCE CONFLICTS OPEN；V02-01及后续 NOT IMPLEMENTED / NOT RUN**
-- **审计依据与当前下一任务：** [2026-11-16 V02-00记录](../reports/2026-11-16_V02-00-static-audit.md)。附件全文、原版窗口图、FCLK编号冲突及AEC更新事件仍开放；本轮不执行硬件动作。
+- **Status：V02-00 STATIC REVIEW COMPLETE / SOURCE CONFLICTS OPEN；V02-01 DESIGN PREPARED / IMPLEMENTATION NOT STARTED / NOT BUILT / NOT RUN；后续阶段 NOT STARTED**
+- **审计依据与当前下一任务：** [2026-11-16 V02-00记录](../reports/2026-11-16_V02-00-static-audit.md)。V02-01接口/状态机设计见[独立设计文档](V02-01-platform-interface-state-machine.md)。附件全文、原版窗口图、FCLK编号冲突及AEC更新事件仍开放；本轮不执行硬件动作。
 - **范围**：LKS32MC071CBT8 + LKS_EVB_MVPOWPRE_V5.0；先无主母线逻辑级保护，再验证低能量模拟采样；最后依据A5和硬件条件决定是否开展功率级验证。**本计划不是已完成的测试报告**。
 - **当前已知**：A5隔离台架低/高侧基础功能有证据，但[整体仍PARTIAL PASS](../reports/2026-11-15_V01-A5-progress.md)，HW-001/HW-002及实际双VGS非重叠安全门槛未关闭。**不连接电机，不给主功率母线上电，不以短路制造过流。**
 - **隔离约束**：首轮称作“控制板逻辑级”仅在**MCU输出与未供电LKS560 HIN/LIN之间确认物理隔离并保留断电通断证据**时成立。不能一边给MCU上5V驱动高电平，一边让仍相连的LKS560 VCC=0V；否则可能超过未供电输入额定、反灌驱动器。不得在带电状态拆插两板。
@@ -100,7 +100,7 @@ firmware/
 | 方案文档与测试矩阵 | 本文为**计划** |
 | PROT-001内部Fail P0-P4计划 | [已有准备稿](V02-PROT-001-internal-path-plan.md)；尚未实现 |
 | 芯片寄存器与保护极性审计记录 | [静态审计已归档](../reports/2026-11-16_V02-00-static-audit.md)；来源冲突开放，非硬件验收 |
-| V02-01 独立宏、平台配置、Bench测试、宿主单测 | TODO |
+| V02-01 平台接口/锁存状态机设计 | [设计已归档](V02-01-platform-interface-state-machine.md)；仅设计，未实现 |
 | Keil隔离构建及编译/HEX SHA | TODO |
 | P0 CMP RAW、P1-P3三相逻辑保护波形与状态 | NOT TESTED |
 | ADC/OPA标定及六扇区采样/故障覆盖矩阵 | TODO |
@@ -108,4 +108,4 @@ firmware/
 
 完成每个工作包再提交对应文档与测试证据；可在V0.2范围内做开发快照，但**不能对V0.2整体打PASS/Tag放行**，直到保护、采样、恢复和安全门槛均得到真实验证。原始波形默认留私有raw，公开仓库只提交脱敏文字、参数和哈希。
 
-**下一步具体行动：关闭V02-00来源/时序疑点，并准备V02-01接口设计、预期寄存器表与状态图；另行允许实现、核实物理隔离并通过接线审核后，才进入P0**，不需要先购买新的示波器或为了“赶V0.2”上主功率母线。
+**下一步具体行动：先解决FCLK门控编号/FAIL滤波时钟和CMP窗口关闭语义，复核DAC0/REF输入范围并取得六路断电隔离证据；随后实现独立V02-01 Bench并进入P0。P1硬件FAIL测试在时钟来源未闭环前保持BLOCKED。** 不需要先购买新的示波器或为了“赶V0.2”上主功率母线。
