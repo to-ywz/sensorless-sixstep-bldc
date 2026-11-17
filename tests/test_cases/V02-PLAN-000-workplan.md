@@ -12,13 +12,15 @@
 
 当前状态：DESIGN完成 / IMPLEMENTED PARTIAL / 三个新增C模块语法检查先前已通过 / Mock未执行 / NOT BUILT / 烧录未执行 / P0～P4全部NOT RUN；config_valid仍为0，RUN仍BLOCKED，A5不修改。旧文“尚无Bench入口/未实现”和旧检查点“compiler validation outstanding”属历史状态，以本段为准；当前Bench仅阻塞诊断入口，非完整注入测试实现。
 
-本专项未发现需立即修改的MCPWM时钟配置错误；SYS_CLK_FEN快照/bit10读回、接口初始化前行为和CMP门控有效性检查仅为后续建议，均未实施。
+本专项未发现需立即修改的MCPWM时钟配置错误。当前源码已有部分平台有效性保护（仅静态核对，未运行验证）：SYS_CLK_FEN快照、MCPWM0 bit10使能/读回、初始化前访问保护、关闭态配置读回与硬件资格分离、CMP_RAW无效占位保护。`config_valid`和`hardware_qualified`仍为0，RAW仍无效，RUN/MOE置1仍BLOCKED；详见[平台接口README](../../firmware/platform/lks32mc071/README.md)。
 
-**CLOCK PATH STATIC AUDIT DOCUMENTED / CODE UNCHANGED / NOT BUILT / NOT HARDWARE TESTED**（CODE UNCHANGED仅指本次归档）。
+未完成项仍包括CMP/DAC初始化、FAIL1_EN、EIF W1C清除、真实Bench注入序列、Mock测试和完整Keil构建。
+
+**CLOCK PATH STATIC AUDIT DOCUMENTED / V02-01 IMPLEMENTED PARTIAL / NOT BUILT / NOT HARDWARE TESTED**。专项审计执行本身只读；后续提交`6dc46f3`同时包含部分固件实现与文档更新。
 
 
 - **规划日期：2026-11-16**
-- **Status：V02-00 STATIC REVIEW COMPLETE / SOURCE CONFLICTS OPEN；V02-01 DESIGN PREPARED / IMPLEMENTATION NOT STARTED / NOT BUILT / NOT RUN；后续阶段 NOT STARTED**
+- **Status（2026-11-16规划时点）：V02-00 STATIC REVIEW COMPLETE / SOURCE CONFLICTS OPEN；V02-01 DESIGN PREPARED / IMPLEMENTATION NOT STARTED / NOT BUILT / NOT RUN；后续阶段 NOT STARTED。当前状态以本文2026-11-17归档摘要及实现检查点为准。**
 - **审计依据与当前下一任务：** [2026-11-16 V02-00记录](../reports/2026-11-16_V02-00-static-audit.md)。V02-01接口/状态机设计见[独立设计文档](V02-01-platform-interface-state-machine.md)。附件全文、原版窗口图、FCLK编号冲突及AEC更新事件仍开放；本轮不执行硬件动作。
 - **范围**：LKS32MC071CBT8 + LKS_EVB_MVPOWPRE_V5.0；先无主母线逻辑级保护，再验证低能量模拟采样；最后依据A5和硬件条件决定是否开展功率级验证。**本计划不是已完成的测试报告**。
 - **当前已知**：A5隔离台架低/高侧基础功能有证据，但[整体仍PARTIAL PASS](../reports/2026-11-15_V01-A5-progress.md)，HW-001/HW-002及实际双VGS非重叠安全门槛未关闭。**不连接电机，不给主功率母线上电，不以短路制造过流。**
@@ -31,7 +33,7 @@
 | 保护级别 | 触发性质 | 硬件动作 | 恢复规则 | 当前实现状态 |
 |---|---|---|---|---|
 | **一级：Cycle-by-Cycle（CBC）逐波限流** | 每一有效PWM周期内经可信模拟电流路径达到限流条件 | **截断本周期的有效导通**；不得等CPU轮询才停 | 仅在设计并实测的**安全PWM周期边界**、保护条件允许且没有二级故障时重新允许下一周期；不能让持续故障造成失控反复导通 | **设计目标；NOT IMPLEMENTED / NOT TESTED** |
-| **二级：严重故障锁存（Latched Fault）** | 严重峰值、持续多个周期受限、保护源异常/不可信、关键供电或驱动安全异常等**候选**条件 | 关闭危险驱动请求并保持故障态；禁止自动重启 | 先确认故障源撤除及安全态，再明确清故障、显式重新RUN；不得随下一PWM周期自行恢复 | **设计目标；NOT IMPLEMENTED / NOT TESTED** |
+| **二级：严重故障锁存（Latched Fault）** | 严重峰值、持续多个周期受限、保护源异常/不可信、关键供电或驱动安全异常等**候选**条件 | 关闭危险驱动请求并保持故障态；禁止自动重启 | 先确认故障源撤除及安全态，再明确清故障、显式重新RUN；不得随下一PWM周期自行恢复 | **软件状态机骨架 IMPLEMENTED PARTIAL；硬件FAIL锁存/清除链 NOT IMPLEMENTED / NOT TESTED** |
 
 **执行顺序与最终架构不同**：V02-01先以**故障锁存模式**验证`CMP1_RAW → FAIL1 → CH0/1/2`的硬件异步关断能力、物理输出安全态及显式恢复；这是安全基础实验，**不是把锁存停机选为最终主要限流策略**。随后V02-02/03验证模拟链及六扇区覆盖，V02-04才研究CBC本周期截断和受控周期恢复，并把二级锁存集成进故障状态机。
 
@@ -83,7 +85,7 @@
 按[详细的内部保护链P0-P4计划](V02-PROT-001-internal-path-plan.md)执行；下面是交付验收的最小阶段门槛。
 
 1. **只读核查**：V1.70手册原始表、SDK V3.16、芯片修订和当前MCPWM默认设置；先校验FAIL1选择的是CMP1 RAW，不受SDK错误注释影响，明确有效电平及触发后的真实输出。
-2. **构建安全Bench**：选独立、与A0～A5互斥的测试宏（暂拟`BENCH_TEST_CMP_FAIL`，**尚未实现**）；驱动器不通电且逻辑输出不会送入其未供电HIN/LIN（例如断电拆开两板并核对供电/连接路径）、主母线0V、无电机。平台层仅负责CMP/DAC/FAIL寄存器，Bench层只管理注入与状态，复用已有LKS560物理关断极性，禁止复制六步电机控制逻辑。
+2. **构建安全Bench**：互斥入口`BENCH_TEST_CMP_FAIL`及诊断骨架已加入；目前只输出阻塞状态/快照，真实DAC注入、有限逻辑PWM和完整P0–P4测试序列**尚未实现**。任何后续硬件测试仍要求驱动器不通电且逻辑输出与未供电HIN/LIN物理隔离、主母线0V、无电机。平台层负责CMP/DAC/FAIL寄存器，Bench层管理注入与状态，复用已有LKS560物理关断极性，禁止复制六步电机控制逻辑。
 3. **P0 只验证CMP1翻转**：不打开PWM时，测RAW随着两档受控参考的变化及恢复；若DAC0/REF路径、共模/量程无法确认，先停下用可读寄存器查因，不用未核对的高压外部信号强行注入。
 4. **P1 验证硬件切断**：有限时逻辑PWM运行时触发RAW，先观测MCPWM的物理 HIN/LIN 是否进入0/1；记录硬件动作与软件安全兜底的先后，不让CPU中断/轮询先代替保护。普通双通道探头分U/V/W逐次检查，**同次测量时将一通道用于故障可见参考**，否则不能量化真实硬件延时。
 5. **P2-P3 错误与恢复**：三相六路逻辑态、持续故障RUN拒绝、故障撤销但未清除仍拒绝、显式清除后方允许下一次RUN；动态自动恢复不在首轮放开。
@@ -115,9 +117,9 @@ firmware/
 | 交付 | 是否已有 |
 |---|---|
 | 方案文档与测试矩阵 | 本文为**计划** |
-| PROT-001内部Fail P0-P4计划 | [已有准备稿](V02-PROT-001-internal-path-plan.md)；尚未实现 |
+| PROT-001内部Fail P0-P4计划 | [已有准备稿](V02-PROT-001-internal-path-plan.md)；计划已归档，诊断入口IMPLEMENTED PARTIAL，真实注入序列NOT IMPLEMENTED / NOT TESTED |
 | 芯片寄存器与保护极性审计记录 | [静态审计已归档](../reports/2026-11-16_V02-00-static-audit.md)；来源冲突开放，非硬件验收 |
-| V02-01 平台接口/锁存状态机设计 | [设计已归档](V02-01-platform-interface-state-machine.md)；仅设计，未实现 |
+| V02-01 平台接口/锁存状态机设计 | [设计已归档](V02-01-platform-interface-state-machine.md)；平台/Manager/Bench已有部分代码，IMPLEMENTED PARTIAL / NOT BUILT / NOT TESTED |
 | Keil隔离构建及编译/HEX SHA | TODO |
 | P0 CMP RAW、P1-P3三相逻辑保护波形与状态 | NOT TESTED |
 | ADC/OPA标定及六扇区采样/故障覆盖矩阵 | TODO |
@@ -125,7 +127,7 @@ firmware/
 
 完成每个工作包再提交对应文档与测试证据；可在V0.2范围内做开发快照，但**不能对V0.2整体打PASS/Tag放行**，直到保护、采样、恢复和安全门槛均得到真实验证。原始波形默认留私有raw，公开仓库只提交脱敏文字、参数和哈希。
 
-**下一步具体行动：先解决FCLK门控编号/FAIL滤波时钟和CMP窗口关闭语义，复核DAC0/REF输入范围并取得六路断电隔离证据；随后实现独立V02-01 Bench并进入P0。P1硬件FAIL测试在时钟来源未闭环前保持BLOCKED。** 不需要先购买新的示波器或为了“赶V0.2”上主功率母线。
+**下一步具体行动：先补齐Protection Manager/Platform的Mock回归（状态优先级、故障与RUN竞争、CLEAR失败、重复初始化等），再完成隔离输出目录下的完整Keil构建/链接并归档日志。并行向厂商确认图14-6入口FCLK编号；CMP窗口关闭语义、DAC0/REF量程/共模/极性及持续FAIL恢复优先级仍须单独关闭。P0–P4目前全部NOT RUN；P1保持BLOCKED，未满足物理隔离与前置证据前不启动实机测试。** 不需要为了“赶V0.2”上主功率母线。
 
 ## V02-01 implementation checkpoint (2026-11-17)
 
@@ -153,6 +155,6 @@ Manager provides BOOT_SAFE, CONFIGURING, DISARMED, RUNNING, FAULT_LATCHED and
 CLEAR_CHECK; synchronous requests serialize with saved/restored PRIMASK.
 Fault latch takes precedence over RUN and STOP; reinitialization cannot erase it.
 CLEAR does not start output. Platform configuration blocking prevents DISARMED/RUN.
-Mock regression tests and compiler validation are still outstanding.
+Mock regression tests are still outstanding. The three new C modules passed ARM Compiler C99 `-fsyntax-only` syntax checks; this is not a full Keil build or link. Full Keil build/link and hardware validation remain outstanding.
 All P0-P4 hardware tests remain NOT RUN; no programming or hardware power actions.
 Do not interpret this checkpoint as V02-01 acceptance or hardware protection qualification.

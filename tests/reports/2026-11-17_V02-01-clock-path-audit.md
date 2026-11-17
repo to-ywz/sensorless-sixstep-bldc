@@ -2,9 +2,9 @@
 
 - 日期：2026-11-17；MCU：LKS32MC071CBT8。
 - 基线：main / `2049c6e7be4b673873adf4d21b75a75998633029`。
-- 状态：**CLOCK PATH STATIC AUDIT DOCUMENTED / CODE UNCHANGED / NOT BUILT / NOT HARDWARE TESTED**。
-- CODE UNCHANGED指本次审计及归档未改代码，不表示原工作区没有既有代码修改。
-- 范围：模块门控、FAIL内部采样时钟和FCLK编号差异；原版页面已渲染目视检查，非仅文字提取。本次归档仅改Markdown，无构建、烧录或硬件动作。
+- 状态：**CLOCK PATH STATIC AUDIT DOCUMENTED / V02-01 IMPLEMENTED PARTIAL / NOT BUILT / NOT HARDWARE TESTED**。
+- 本次专项审计执行本身为只读；“CODE UNCHANGED”仅描述审计操作未修改固件，不表示同一Git提交仅包含Markdown。
+- 范围：模块门控、FAIL内部采样时钟和FCLK编号差异；原版页面已渲染目视检查，非仅文字提取。审计过程未构建、烧录或执行硬件动作；代码与文档合并提交边界见第9节。
 - 原始手册：`LKS32MC07x_User_Manual_v1.69.pdf`，424页；本地来源为用户Downloads目录，不将厂商原件上传仓库。
 - 手册SHA256：`41369D4CC7CF3314B9E312391DBDD9A2D139E48D99BC89D7ACB47E03E8B2B29E`。
 - 标签：MANUAL=原版直接证据；SDK=代码/宏；OFFICIAL=官方资料；INFERENCE=推断；OPEN=不能确认。
@@ -118,9 +118,25 @@ bit10是上游模块门控，最终采样时钟还受内部工作时钟使能及
 
 本专项未发现需要立即修正的MCPWM时钟配置错误（SDK）：LksProtection_Init先置bit10再访问MCPWM；SDK再置一次为重复使能，不是切换时钟；MCLK_EN=1、CLK_DIV=0、FLT_CLKDIV=0符合目标；未发现错误使用bit4或错误滤波时间计算代码。
 
-以下仅为建议，未实施：快照增加SYS_CLK_FEN及bit10读回；区分寄存器读回与硬件资格；明确Read/SetMoe初始化前行为；CMP数字门控未开启时不得把CMP_RAW读数当有效验收数据。不修改SDK来修补注释，不解除config_valid阻塞。
+### 7.1 当前源码已实现项（静态源码核对；未运行验证）
 
-文档建议：分开记录模块门控确认、内部图示链路、入口编号OPEN；向厂商提供图6-1/14-6、FCLK[4]正文及HAL注释/代码对照，索取网络编号与芯片修订适用说明。
+| 项目 | 源码状态 | 依据与边界 |
+|---|---|---|
+| SYS_CLK_FEN快照 | IMPLEMENTED | `LksProtection_Read()`将SYS_CLK_FEN写入快照字段`sys_clk_fen`；未进行运行时验证。 |
+| MCPWM0 bit10使能与读回 | IMPLEMENTED | `LksProtection_Init()`调用SDK使能MCPWM0并读回bit10；`LksProtection_SetMoe(0)`在初始化前也先使能并核对bit10。只证明代码路径，不证明滤波器入口网络编号。 |
+| 初始化前访问行为 | IMPLEMENTED PARTIAL | `Read()`在未初始化或门控关闭时不访问MCPWM/CMP；`SetMoe(0)`允许先建立模块时钟后执行安全关断；`SetMoe(1)`仍返回BLOCKED。未运行验证。 |
+| 关闭态配置与硬件资格分离 | IMPLEMENTED | `safe_config_matches`只检查关闭态配置子集；`hardware_qualified`与`config_valid`仍为0。 |
+| CMP_RAW有效性保护 | IMPLEMENTED | `raw_valid`恒为0，`raw=0`仅是占位；当前没有CMP/DAC初始化，也不把占位值当作无故障证据。 |
+
+### 7.2 仍未实现或未验证
+
+- `FAIL1_EN`仍保持0；CMP/DAC输入配置、极性确认和受控注入未实现。
+- `LksProtection_ClearFail()`仍返回BLOCKED，EIF的W1C清除未实现。
+- Bench目前只是可读状态的阻塞诊断入口，没有真实DAC注入、有限逻辑PWM和完整P0–P4序列。
+- Mock回归未执行；完整Keil构建/链接未完成；上述源码实现均未获得运行或硬件验证。
+- 不修改SDK来修补HAL注释，不解除`config_valid=0`及RUN/MOE置1的安全阻塞。
+
+后续建议：完成Mock状态机测试、隔离目录下的完整Keil构建，并继续向厂商确认图14-6入口FCLK编号及芯片修订适用说明。
 
 ## 8. 未解决项及实测边界
 
@@ -139,6 +155,7 @@ bit10是上游模块门控，最终采样时钟还受内部工作时钟使能及
 | Keil完整构建 | NOT BUILT |
 | 烧录／P0～P4 | 未执行／全部NOT RUN |
 | config_valid／RUN | 仍为0／仍BLOCKED |
-| A5／SDK／工程 | 本次不修改 |
+| A5后端／SDK／HAL | 本次提交差异未修改；专项审计本身也未修改这些代码 |
+| Keil工程 | 提交`6dc46f3`修改`LK_StdPeriph.uvprojx`，为两个Target增加V02 Protection分组及三个C源文件；因此该提交不是纯文档提交 |
 
-本轮仅新增本报告并增量更新设计、总计划、内部计划、板级保护链和报告索引；保留既有未提交修改及HEX删除状态，未提交或推送。
+专项审计执行本身为只读，未修改固件、SDK、Keil工程，未构建、烧录或执行硬件动作。随后Git提交`6dc46f36ad61b61093059056477d91e7252c58c1`（15个文件，+764/-5）同时包含本报告及关联Markdown、`main.c`、六个保护模块C/H文件和Keil工程文件变更。该提交属于“V02-01部分实现 + 时钟审计文档”的混合提交，不能称为纯文档提交；仅凭提交本身不能判定各项代码修改的具体产生时间。本次修订前的云端读取时，GitHub `main`已指向该提交。此前本地工作区中的未提交用户配置/产物变化不属于该远端提交，也不由本报告推断其具体语义。

@@ -12,9 +12,9 @@
 
 当前状态：DESIGN完成 / IMPLEMENTED PARTIAL / 三个新增C模块语法检查先前已通过 / Mock未执行 / NOT BUILT / 烧录未执行 / P0～P4全部NOT RUN；config_valid仍为0，RUN仍BLOCKED，A5不修改。旧文“尚无Bench入口/未实现”和旧检查点“compiler validation outstanding”属历史状态，以本段为准；当前Bench仅阻塞诊断入口，非完整注入测试实现。
 
-本专项未发现需立即修改的MCPWM时钟配置错误；SYS_CLK_FEN快照/bit10读回、接口初始化前行为和CMP门控有效性检查仅为后续建议，均未实施。
+本专项未发现需立即修改的MCPWM时钟配置错误。当前平台代码已实现SYS_CLK_FEN快照、MCPWM0 bit10使能/读回、初始化前访问保护及CMP_RAW无效占位保护（仅静态源码确认，未运行验证）；`config_valid=0`，RUN/MOE置1仍BLOCKED。CMP/DAC配置、FAIL1_EN和W1C清除仍未实现。
 
-**CLOCK PATH STATIC AUDIT DOCUMENTED / CODE UNCHANGED / NOT BUILT / NOT HARDWARE TESTED**（CODE UNCHANGED仅指本次归档）。
+**CLOCK PATH STATIC AUDIT DOCUMENTED / V02-01 IMPLEMENTED PARTIAL / NOT BUILT / NOT HARDWARE TESTED**。专项审计执行本身只读；后续提交`6dc46f3`包含部分固件实现与文档更新。
 
 
 依据：
@@ -26,7 +26,7 @@
 
 **2026-11-16静态核查补充：** [V02-00审计](../../../tests/reports/2026-11-16_V02-00-static-audit.md)记录RAW仍受开窗、独立16周期FAIL滤波、门控编号冲突、CNT0继续运行及AEC按更新事件恢复的依据。当前六路默认态/mask已配置，CMP1/FAIL1输入尚未启用；不把静态路由视为已实现保护。本文后续历史步骤涉及Gate的部分不属于当前任务；当前只准备物理隔离的MCU逻辑方案，不给驱动/功率级供电。
 
-**V02-01设计补充：** [平台接口与锁存状态机设计](../../../tests/test_cases/V02-01-platform-interface-state-machine.md)定义寄存器预期值、初始化顺序、软件RUN/CLEAR权限及P0–P4放行门。该设计未实现、未构建、未实测；FCLK门控和CMP窗口关闭语义未解决前，P1保持BLOCKED。
+**V02-01设计与实现补充：** [平台接口与锁存状态机设计](../../../tests/test_cases/V02-01-platform-interface-state-machine.md)定义寄存器目标、初始化顺序、软件RUN/CLEAR权限及P0–P4放行门；平台适配、Protection Manager和阻塞诊断入口已有部分代码实现（IMPLEMENTED PARTIAL），但未完成Mock、完整Keil构建或硬件验证。SYS_CLK_FEN bit10模块门控已确认；图14-6入口FCLK编号仍OPEN，CMP窗口关闭语义、模拟量程/共模/极性及持续FAIL恢复优先级仍未关闭，因此P1保持BLOCKED。
 
 
 ## 当前方案优先级（2026-11-08 纠错；优先于文内历史路线 A）

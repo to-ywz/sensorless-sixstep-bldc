@@ -12,14 +12,23 @@
 
 当前状态：DESIGN完成 / IMPLEMENTED PARTIAL / 三个新增C模块语法检查先前已通过 / Mock未执行 / NOT BUILT / 烧录未执行 / P0～P4全部NOT RUN；config_valid仍为0，RUN仍BLOCKED，A5不修改。旧文“尚无Bench入口/未实现”和旧检查点“compiler validation outstanding”属历史状态，以本段为准；当前Bench仅阻塞诊断入口，非完整注入测试实现。
 
-本专项未发现需立即修改的MCPWM时钟配置错误；SYS_CLK_FEN快照/bit10读回、接口初始化前行为和CMP门控有效性检查仅为后续建议，均未实施。
+本专项未发现需立即修改的MCPWM时钟配置错误。按当前HEAD源码静态核对，以下接口性改进已经存在，但均未经过运行验证：
 
-**CLOCK PATH STATIC AUDIT DOCUMENTED / CODE UNCHANGED / NOT BUILT / NOT HARDWARE TESTED**（CODE UNCHANGED仅指本次归档）。
+| 项目 | 当前代码状态 | 证据与边界 |
+|---|---|---|
+| SYS_CLK_FEN快照、MCPWM0 bit10使能/读回 | IMPLEMENTED | `lks_protection.c`保存SYS_CLK_FEN；初始化和安全关断路径使能并读回bit10。 |
+| 初始化前接口行为 | IMPLEMENTED PARTIAL | `Read()`在不可访问时只报告系统时钟；`SetMoe(0)`可先使能并核对bit10再安全关断；置MOE仍BLOCKED。 |
+| 关闭态配置与硬件资格区分 | IMPLEMENTED | `safe_config_matches`与`hardware_qualified/config_valid`分离；后两者仍为0。 |
+| CMP_RAW有效性保护 | IMPLEMENTED | `raw_valid=0`，占位raw不被解释为真实测量；CMP数字门控/模拟链尚未配置。 |
+
+这些是源码存在性结论，不代表寄存器行为已运行验证。`FAIL1_EN`、CMP/DAC初始化、W1C清除和真实注入仍未实现；Mock未执行，Keil完整构建未完成。
+
+**CLOCK PATH STATIC AUDIT DOCUMENTED / V02-01 IMPLEMENTED PARTIAL / NOT BUILT / NOT HARDWARE TESTED**。专项审计执行本身只读；后续提交`6dc46f3`为代码与文档混合提交，详见时钟专项报告第9节。
 
 
 - 日期：2026-11-16
 - 基线：GitHub main / 550897aa22481a899a0a09b399052991570599ec
-- 状态：**DESIGN PREPARED / NOT IMPLEMENTED / NOT BUILT / NOT RUN**
+- 状态：**DESIGN PREPARED（2026-11-16设计时点）/ NOT IMPLEMENTED（当时状态）/ NOT BUILT / NOT RUN**；当前代码状态以本文2026-11-17摘要及实现检查点为准。
 - 范围：只定义平台接口、寄存器目标值、初始化顺序、软件故障状态机和隔离逻辑测试门槛；不修改固件，不构建、不烧录、不执行硬件动作。
 - 上位依据：[V02-00静态审计](../reports/2026-11-16_V02-00-static-audit.md)、[V0.2总计划](V02-PLAN-000-workplan.md)、[内部保护链P0–P4计划](V02-PROT-001-internal-path-plan.md)。
 
@@ -34,8 +43,8 @@ V02-01首先用**锁存模式**证明CMP1原始比较结果能够经MCPWM FAIL1�
 3. 首轮关闭CMP开窗，避免把PWM窗口门控混入基本FAIL路由；但“所有窗口位为0时的直通语义”仍须在P1前确认，不能仅凭推断放行。
 4. TR0_AEC保持关闭；本阶段禁止自动逐周期恢复。
 5. 所有P0–P4都要求控制板六路MCU输出与未供电LKS560 HIN/LIN物理断开，并保留断电通断证据。
-6. A0–A5入口与参数保持不变；新增Bench入口必须与现有入口互斥。当前main.c尚无BENCH_TEST_CMP_FAIL入口。
-7. 本文中的函数名是接口职责示意，不是已提交的C API。
+6. A0–A5入口与参数保持不变；新增Bench入口必须与现有入口互斥。（2026-11-16设计时点尚无`BENCH_TEST_CMP_FAIL`入口；2026-11-17实现检查点已增加互斥诊断入口，但不代表完整Bench测试序列。）
+7. 本节中的函数名是2026-11-16设计时点的职责示意，不等同于后续实际C API；实际接口以当前`lks_protection.h`和`protection_manager.h`为准。
 
 ## 2. 软件分层与唯一MOE控制权
 
@@ -91,7 +100,7 @@ V02-01首先用**锁存模式**证明CMP1原始比较结果能够经MCPWM FAIL1�
 
 ## 4. 寄存器预期配置表
 
-下表是V02-01的**目标配置/读回清单**，不是已经写入固件的配置。FAIL极性、DAC数值、参考电压和滤波时钟仍需确认。
+下表是V02-01的**设计目标/读回清单**，不代表全部目标已经实现。当前平台代码只配置并核对部分关闭态默认值；FAIL1_EN仍为0，CMP/DAC和极性资格未建立。FAIL极性、DAC数值、参考电压和滤波时钟仍需确认。
 
 | 寄存器/字段 | 目标值或策略 | 读回/验收 | 依据与状态 |
 |---|---|---|---|
@@ -194,8 +203,9 @@ P0在物理隔离、DAC0/REF范围与共模确认后可以单独评估；P1未�
 
 ## 8. 当前结论
 
-- **已完成：** V02-01平台边界、寄存器目标值、初始化顺序、RUN/STOP/CLEAR/FAULT_LATCHED状态机及P0–P4放行设计。
-- **未完成：** 源代码实现、独立Bench入口、宿主测试、Keil构建、HEX指纹、任何硬件逻辑验证。
-- **仍开放：** FCLK门控编号、CMP窗口关闭语义、CMP1/FAIL1极性组合、持续FAIL下MOE优先级、手动UPDATE/AEC行为、DAC0/REF实际量程与共模。
-- **禁止升级：** 未取得物理隔离证据和P1逻辑FAIL通过前，不给LKS560/功率级供电；未关闭A5安全遗留及完整保护验收前，不接主母线或电机。
-- **最终架构不变：** CBC逐波限流为常规一级，严重/持续故障锁存为二级；本轮锁存Bench仅验证内部硬件关断链，不代表CBC实现。
+- **设计已完成：** V02-01平台边界、寄存器目标值、初始化顺序、RUN/STOP/CLEAR/FAULT_LATCHED状态机及P0–P4放行设计。
+- **代码部分实现：** `lks_protection`、`protection_manager`和`bench_cmp_fail`模块及互斥诊断入口已存在；SYS_CLK_FEN快照/bit10读回、初始化前访问保护、关闭态配置读回与资格标志分离、RAW无效占位保护已实现（仅源码静态确认）。
+- **未完成：** FAIL1_EN使能、CMP/DAC配置、EIF W1C清除、真实注入序列、Mock宿主测试、完整Keil构建/链接、HEX指纹及任何硬件逻辑验证。
+- **仍开放：** FCLK入口编号、CMP窗口关闭语义、CMP1/FAIL1极性组合、持续FAIL下MOE优先级、手动UPDATE/AEC行为、DAC0/REF实际量程与共模。
+- **安全门禁：** `config_valid=0`，RUN及MOE置1仍BLOCKED；P0–P4全部NOT RUN。未取得物理隔离证据和相应测试放行前，不给LKS560/功率级供电；未关闭A5安全遗留及完整保护验收前，不接主母线或电机。
+- **最终架构不变：** CBC逐波限流为常规一级，严重/持续故障锁存为二级；当前锁存状态机代码不代表硬件FAIL链已验证，也不代表CBC实现。

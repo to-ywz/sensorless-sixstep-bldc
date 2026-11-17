@@ -12,14 +12,16 @@
 
 当前状态：DESIGN完成 / IMPLEMENTED PARTIAL / 三个新增C模块语法检查先前已通过 / Mock未执行 / NOT BUILT / 烧录未执行 / P0～P4全部NOT RUN；config_valid仍为0，RUN仍BLOCKED，A5不修改。旧文“尚无Bench入口/未实现”和旧检查点“compiler validation outstanding”属历史状态，以本段为准；当前Bench仅阻塞诊断入口，非完整注入测试实现。
 
-本专项未发现需立即修改的MCPWM时钟配置错误；SYS_CLK_FEN快照/bit10读回、接口初始化前行为和CMP门控有效性检查仅为后续建议，均未实施。
+本专项未发现需立即修改的MCPWM时钟配置错误。当前源码已实现SYS_CLK_FEN快照、MCPWM0 bit10使能/读回、初始化前访问保护、关闭态配置读回与硬件资格分离，以及CMP_RAW无效占位保护（仅静态源码确认，未运行验证）。`config_valid=0`、RAW无效，RUN/MOE置1仍BLOCKED。
 
-**CLOCK PATH STATIC AUDIT DOCUMENTED / CODE UNCHANGED / NOT BUILT / NOT HARDWARE TESTED**（CODE UNCHANGED仅指本次归档）。
+FAIL1_EN、CMP/DAC初始化、EIF W1C清除和真实注入流程仍未实现；Mock未执行，Keil完整构建未完成。
+
+**CLOCK PATH STATIC AUDIT DOCUMENTED / V02-01 IMPLEMENTED PARTIAL / NOT BUILT / NOT HARDWARE TESTED**。专项审计执行本身只读；后续提交`6dc46f3`包含部分固件实现与文档更新。
 
 
 - Date: 2026-11-15；静态审计补充：2026-11-16
-- 只读依据：[V02-00审计与未决项](../reports/2026-11-16_V02-00-static-audit.md)；Bench仍未实现，以下步骤未执行。六路物理隔离是包括P0在内的共同前置条件；本轮不进行硬件动作。
-- Status: PREPARED / NOT IMPLEMENTED / NOT RUN
+- 只读依据：[V02-00审计与未决项](../reports/2026-11-16_V02-00-static-audit.md)；本段测试步骤是2026-11-15规划时点的准备记录，当前已有阻塞诊断入口，但真实注入Bench和以下P0–P4步骤仍未实现/未执行。六路物理隔离是包括P0在内的共同前置条件；本轮不进行硬件动作。
+- Status: TEST PROCEDURE PREPARED / DIAGNOSTIC ENTRY IMPLEMENTED PARTIAL / P0–P4 NOT RUN
 - V02-01平台接口与锁存状态机设计已单独归档：[设计文档](V02-01-platform-interface-state-machine.md)。本文件继续负责P0–P4内部保护链测试步骤；设计交付不代表Bench已实现或测试已放行。
 - 前序：A5隔离台架主要功能用户实测正常；六管电源循环已确认。输入电气峰值、纳秒瞬态、完整瞬态VGS非重叠等遗留项保留，不宣称V0.1所有安全门槛关闭。
 - 目标：**作为双级保护的第一阶段实验，先在锁存模式**证明CMP1_RAW→MCPWM0_FAIL012.FAIL1→CH0/1/2硬件关断，不依赖主循环或中断先执行STOP。**最终V0.2交付仍以CBC逐波限流为常规主保护，严重故障锁存为第二级保护。**
@@ -34,7 +36,7 @@
 
 ## 实现约束
 
-1. 保留A0～A5互斥入口；宏名暂拟 `BENCH_TEST_CMP_FAIL`（尚未实现），新增独立保护链Bench入口；共享已有物理关断极性/板级映射，不复制三相输出算法。
+1. 保留A0～A5互斥入口；`BENCH_TEST_CMP_FAIL`独立入口已加入main.c并与现有入口互斥，当前仅为阻塞诊断骨架；真实注入和P0–P4执行序列仍未实现。共享已有物理关断极性/板级映射，不复制三相输出算法。
 2. MCU寄存器配置留Platform，Bench负责单次触发和状态报告，产品后续应复用正式保护配置模块。
 3. 初始化默认MOE关闭、HIN低/LIN高；先核实比较器安全态和**MCU输出与未供电预驱输入隔离**，再允许逻辑PWM。保持六路Fail默认值和mask正确，禁止自动恢复（TR0_AEC=0）。
 4. 配置CMP1 RAW作为FAIL1来源、使能与极性；冻结滤波/消隐设置并记录，不将中断输出误当RAW。CMP中断不承担紧急STOP。
@@ -96,6 +98,6 @@ Manager provides BOOT_SAFE, CONFIGURING, DISARMED, RUNNING, FAULT_LATCHED and
 CLEAR_CHECK; synchronous requests serialize with saved/restored PRIMASK.
 Fault latch takes precedence over RUN and STOP; reinitialization cannot erase it.
 CLEAR does not start output. Platform configuration blocking prevents DISARMED/RUN.
-Mock regression tests and compiler validation are still outstanding.
+Mock regression tests are still outstanding. The three new C modules passed ARM Compiler C99 `-fsyntax-only` syntax checks; this is not a full Keil build or link. Full Keil build/link and hardware validation remain outstanding.
 All P0-P4 hardware tests remain NOT RUN; no programming or hardware power actions.
 Do not interpret this checkpoint as V02-01 acceptance or hardware protection qualification.
