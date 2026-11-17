@@ -4,6 +4,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import sys
+sys.dont_write_bytecode = True
+from check_protection_gates import check as check_protection_gates
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cc', default='gcc', help='Host C99 GCC-compatible compiler')
@@ -13,7 +16,12 @@ platform = 'firmware/platform/lks32mc071'
 board = 'firmware/board/lks_evb_mvpowpre'
 bench = 'firmware/tests/bench'
 model = 'firmware/motor/commutation'
+protection = 'firmware/application/protection'
+check_protection_gates(root)
 cases = [
+    ('protection', ['tests/unit', platform, protection],
+     ['tests/unit/test_protection_manager.c', 'tests/unit/protection_fake_platform.c',
+      protection+'/protection_manager.c']),
     ('table', [model], ['tests/unit/test_sixstep_table.c', model+'/sixstep_table.c']),
     ('bench', ['tests/unit/fakes', bench, platform, model],
      ['tests/unit/test_sixstep_bench.c', bench+'/test_sixstep_logic.c', model+'/sixstep_table.c']),
@@ -31,4 +39,13 @@ with tempfile.TemporaryDirectory(prefix='lks560-tests-') as temp:
         subprocess.run([args.cc, '-std=c99', '-Wall', '-Wextra', '-Werror']+
                        ['-I'+str(root/p) for p in includes]+
                        [str(root/p) for p in sources]+['-o', exe], check=True)
-        subprocess.run([exe], check=True)
+        if name == 'protection':
+            scenarios = subprocess.check_output([exe, '--list'], text=True, timeout=10).splitlines()
+            if not scenarios or len(set(scenarios)) != len(scenarios):
+                raise RuntimeError('Empty or duplicate Protection Manager scenarios')
+            for scenario in scenarios:
+                # Fresh OS process for each scenario: no Manager reset seam.
+                subprocess.run([exe, scenario], check=True, timeout=10)
+            print(f'Protection Manager: {len(scenarios)} isolated scenarios PASS', flush=True)
+        else:
+            subprocess.run([exe], check=True)
