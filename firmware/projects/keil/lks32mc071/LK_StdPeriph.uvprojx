@@ -560,6 +560,26 @@
         <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
+        <Group>
+          <GroupName>V02 Protection</GroupName>
+          <Files>
+            <File>
+              <FileName>lks_protection.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks_protection.c</FilePath>
+            </File>
+            <File>
+              <FileName>protection_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\protection\protection_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>bench_cmp_fail.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench_cmp_fail\bench_cmp_fail.c</FilePath>
+            </File>
+          </Files>
+        </Group>
       </Groups>
     </Target>
     <Target>
@@ -1114,6 +1134,26 @@
         </Group>
         <Group>
           <GroupName>::CMSIS</GroupName>
+        </Group>
+        <Group>
+          <GroupName>V02 Protection</GroupName>
+          <Files>
+            <File>
+              <FileName>lks_protection.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks_protection.c</FilePath>
+            </File>
+            <File>
+              <FileName>protection_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\protection\protection_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>bench_cmp_fail.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench_cmp_fail\bench_cmp_fail.c</FilePath>
+            </File>
+          </Files>
         </Group>
       </Groups>
     </Target>

@@ -18,11 +18,13 @@
 
 #if (defined(BENCH_TEST_MCPWM_SINGLE) + defined(BENCH_TEST_MCPWM_COMPLEMENTARY) + \
      defined(BENCH_TEST_MCPWM_THREE_PAIR) + defined(BENCH_TEST_SIXSTEP_LOGIC) + \
-     defined(BENCH_TEST_GATE_DRIVER)) > 1
+     defined(BENCH_TEST_GATE_DRIVER) + defined(BENCH_TEST_CMP_FAIL)) > 1
 #error "Select only one MCPWM bench test"
 #endif
 
-#if defined(BENCH_TEST_GATE_DRIVER)
+#if defined(BENCH_TEST_CMP_FAIL)
+#include "../tests/bench_cmp_fail/bench_cmp_fail.h"
+#elif defined(BENCH_TEST_GATE_DRIVER)
 #include "test_gate_driver.h"
 #elif defined(BENCH_TEST_SIXSTEP_LOGIC)
 #include "test_sixstep_logic.h"
@@ -48,7 +50,10 @@ int main(void)
 {
     board_init_safe();
 
-#if defined(BENCH_TEST_GATE_DRIVER)
+#if defined(BENCH_TEST_CMP_FAIL)
+    bench_cmp_fail_init();
+    for (;;) { bench_cmp_fail_poll(); }
+#elif defined(BENCH_TEST_GATE_DRIVER)
     bench_gate_driver_init();
     for (;;) {
         bench_gate_driver_poll();

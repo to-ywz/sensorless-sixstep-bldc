@@ -1,5 +1,22 @@
 # V0.2 — 采样可信性与硬件过流关断：阶段执行计划
 
+## 2026-11-17 时钟专项归档与当前状态（优先于下文历史描述）
+
+依据：[MCPWM FAIL滤波时钟专项审计](../reports/2026-11-17_V02-01-clock-path-audit.md)。历史结论保留；本文旧有“时钟门控未确认/FCLK门控冲突”的笼统描述按以下三项分别理解：
+
+- **MANUAL + SDK：SYS_CLK_FEN bit10为MCPWM0模块门控，已确认；bit4属于TIMER0。** 不得开启bit4作为MCPWM使能。
+- **MANUAL：图14-6内部链路已确认**：`FCLK → MCPWM0_TCLK.CLK_EN[2] → CLK_DIV[1:0] → TCLK → FLT.FLT_CLKDIV[7:0] → filter clock → 16周期滤波器`。时基另受BASE_CNTx_EN[6/7]控制；CLK_EN不是独立滤波时钟源选择。
+- **INFERENCE / OPEN：** 图14-6的FCLK无编号；其与FCLK[10]为同一网络属于较强推断，尚缺厂商直接确认。正文FCLK[4]高度疑似笔误但证据不足。图14-6二级方框1～16与位表1～256、图14-3/14-6门控位置差异均保持MANUAL INCONSISTENCY / OPEN，不自行裁定物理实现。
+
+专项静态审计已完成归档；厂商确认与必要实测待处理，不能将模块门控、内部链路、入口编号统一写作“门控未确认”。P1仍BLOCKED：入口编号关系、CMP窗口关闭语义、模拟量程/共模/极性及持续FAIL恢复条件等未决项未关闭；不新增或执行硬件测试，不修改硬件配置，不解除安全门禁。
+
+当前状态：DESIGN完成 / IMPLEMENTED PARTIAL / 三个新增C模块语法检查先前已通过 / Mock未执行 / NOT BUILT / 烧录未执行 / P0～P4全部NOT RUN；config_valid仍为0，RUN仍BLOCKED，A5不修改。旧文“尚无Bench入口/未实现”和旧检查点“compiler validation outstanding”属历史状态，以本段为准；当前Bench仅阻塞诊断入口，非完整注入测试实现。
+
+本专项未发现需立即修改的MCPWM时钟配置错误；SYS_CLK_FEN快照/bit10读回、接口初始化前行为和CMP门控有效性检查仅为后续建议，均未实施。
+
+**CLOCK PATH STATIC AUDIT DOCUMENTED / CODE UNCHANGED / NOT BUILT / NOT HARDWARE TESTED**（CODE UNCHANGED仅指本次归档）。
+
+
 - **规划日期：2026-11-16**
 - **Status：V02-00 STATIC REVIEW COMPLETE / SOURCE CONFLICTS OPEN；V02-01 DESIGN PREPARED / IMPLEMENTATION NOT STARTED / NOT BUILT / NOT RUN；后续阶段 NOT STARTED**
 - **审计依据与当前下一任务：** [2026-11-16 V02-00记录](../reports/2026-11-16_V02-00-static-audit.md)。V02-01接口/状态机设计见[独立设计文档](V02-01-platform-interface-state-machine.md)。附件全文、原版窗口图、FCLK编号冲突及AEC更新事件仍开放；本轮不执行硬件动作。
@@ -109,3 +126,33 @@ firmware/
 完成每个工作包再提交对应文档与测试证据；可在V0.2范围内做开发快照，但**不能对V0.2整体打PASS/Tag放行**，直到保护、采样、恢复和安全门槛均得到真实验证。原始波形默认留私有raw，公开仓库只提交脱敏文字、参数和哈希。
 
 **下一步具体行动：先解决FCLK门控编号/FAIL滤波时钟和CMP窗口关闭语义，复核DAC0/REF输入范围并取得六路断电隔离证据；随后实现独立V02-01 Bench并进入P0。P1硬件FAIL测试在时钟来源未闭环前保持BLOCKED。** 不需要先购买新的示波器或为了“赶V0.2”上主功率母线。
+
+## V02-01 implementation checkpoint (2026-11-17)
+
+Status: DESIGN retained / IMPLEMENTED PARTIAL / NOT BUILT / NOT TESTED.
+
+New platform: `lks_protection.h/.c`; application: `protection_manager.h/.c`;
+independent entry: `BENCH_TEST_CMP_FAIL`, `bench_cmp_fail.h/.c`.
+SDK and A5 backend files are unchanged. Existing user Keil settings are retained.
+
+The platform uses SDK MCPWM initialization and existing board off defaults.
+It saves boot EIF before SDK initialization clears it. Defaults are CH_DEF[5:0]=0x15,
+CH_MASK[5:0]=0x3F, CLK_DIV=0, FLT=0, AEC=0, AUEN=0, CNT0=0, MOE=0.
+FAIL1_SEL=1 is prepared, but FAIL1_EN remains zero. No SYS_CLK_FEN bit4 write.
+Sources: SDK `Source/lks32mc07x_mcpwm.c`, existing `lks560_pwm_defaults.c`,
+manual MCPWM FAIL012/CH_DEF/CH_MASK/TCLK/SDCFG/EIF/PRT tables.
+
+FCLK numbering, disabled-window bypass, qualified analog reference/polarity,
+and sustained-FAIL restart semantics remain BLOCKED. Platform RUN and event-clear
+return BLOCKED; no unqualified DAC code or CMP initialization is applied.
+W1C hardware clear, qualified CMP/DAC setup and actual injection sequences are
+NOT IMPLEMENTED. Bench reports each hardware case BLOCKED via debugger-visible
+`bench_cmp_fail_report`; it is a blocked diagnostic entry, not a completed P0-P4 bench.
+
+Manager provides BOOT_SAFE, CONFIGURING, DISARMED, RUNNING, FAULT_LATCHED and
+CLEAR_CHECK; synchronous requests serialize with saved/restored PRIMASK.
+Fault latch takes precedence over RUN and STOP; reinitialization cannot erase it.
+CLEAR does not start output. Platform configuration blocking prevents DISARMED/RUN.
+Mock regression tests and compiler validation are still outstanding.
+All P0-P4 hardware tests remain NOT RUN; no programming or hardware power actions.
+Do not interpret this checkpoint as V02-01 acceptance or hardware protection qualification.
