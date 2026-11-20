@@ -78,3 +78,22 @@ void board_heartbeat_toggle(void)
         GPIO_SetBits(GPIO0, BOARD_HEARTBEAT_IO);
     }
 }
+
+
+/* P0 diagnostic stimulus on the detached core board's P0.0 header. */
+void board_p0_stimulus_init(void)
+{
+    GPIO_InitTypeDef gpio;
+    GPIO_ResetBits(GPIO0, GPIO_Pin_0);
+    GPIO_PinAFConfig(GPIO0, GPIO_PinSource_0, AF0_GPIO);
+    GPIO_StructInit(&gpio);
+    gpio.GPIO_Pin=GPIO_Pin_0;
+    gpio.GPIO_Mode=GPIO_Mode_OUT;
+    GPIO_Init(GPIO0, &gpio);
+}
+
+void board_p0_stimulus_set(uint32_t high)
+{
+    if (high == 1u) GPIO_SetBits(GPIO0, GPIO_Pin_0);
+    else GPIO_ResetBits(GPIO0, GPIO_Pin_0);
+}

@@ -339,7 +339,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>BENCH_TEST_GATE_DRIVER</Define>
+              <Define>BENCH_TEST_CMP_FAIL,M2_P1_DYNAMIC</Define>
               <Undefine></Undefine>
               <IncludePath>.\Include;.\LKS32MC07x_Periph_Driver\Include;.\FreeMaster;.\RTT;..\..\..\board\lks_evb_mvpowpre;..\..\..\tests\bench;..\..\..\motor\commutation;..\..\..\platform\lks32mc071</IncludePath>
             </VariousControls>
@@ -558,9 +558,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>::CMSIS</GroupName>
-        </Group>
-        <Group>
           <GroupName>V02 Protection</GroupName>
           <Files>
             <File>
@@ -579,6 +576,9 @@
               <FilePath>..\..\..\tests\bench_cmp_fail\bench_cmp_fail.c</FilePath>
             </File>
           </Files>
+        </Group>
+        <Group>
+          <GroupName>::CMSIS</GroupName>
         </Group>
       </Groups>
     </Target>
@@ -1133,9 +1133,6 @@
           </Files>
         </Group>
         <Group>
-          <GroupName>::CMSIS</GroupName>
-        </Group>
-        <Group>
           <GroupName>V02 Protection</GroupName>
           <Files>
             <File>
@@ -1154,6 +1151,9 @@
               <FilePath>..\..\..\tests\bench_cmp_fail\bench_cmp_fail.c</FilePath>
             </File>
           </Files>
+        </Group>
+        <Group>
+          <GroupName>::CMSIS</GroupName>
         </Group>
       </Groups>
     </Target>

@@ -9,6 +9,12 @@
 #include "lks560_pwm_defaults.h"
 #include "lks_protection.h"
 #include <string.h>
+#include "board_init.h"
+
+#ifdef M2_P1_DYNAMIC
+static uint32_t p1_prepared;
+static uint32_t p1_output;
+#endif
 /* 仅表示平台已建立过MCPWM访问条件，不表示保护初始化成功。
  * 每次Read仍需重新检查实际模块门控，不能只信任这个软件标志。 */
 static uint32_t initialized;
@@ -67,13 +73,53 @@ void LksProtection_Read(ProtectionSnapshot *s)
     s->raw_valid=0u;
     s->hardware_qualified=0u;
     s->config_valid=0u;
+#ifdef M2_P1_DYNAMIC
+    if (p1_prepared && s->mcpwm_readable) {
+        uint32_t raw=LksProtection_P0ReadRaw();
+        s->raw_valid=(raw<=1u);
+        s->raw=raw;
+        /* Eligibility is local to this experiment. Hardware qualification stays zero. */
+        s->config_valid=(s->fail012 & 0xC38u)==0x420u &&
+            (s->tclk & 0x07u)==4u && s->flt==0u && s->auen==0u &&
+            !(s->sdcfg & 0x70u) && (s->ch_def & 0x3fu)==0x15u &&
+            (s->ch_mask & 0x3fu)==0x3fu;
+        if (s->config_valid && s->raw_valid) s->blockers=0u;
+    }
+#endif
     LksProtection_ExitCritical(key);
 }
+#ifdef M2_P1_DYNAMIC
+uint32_t LksProtection_SelectBenchOutput(uint32_t output)
+{
+    if (!p1_prepared || output>=6u) return 0u;
+    p1_output=output;
+    return 1u;
+}
+#endif
+
 ProtectionResult LksProtection_SetMoe(uint32_t enable)
 {
     ProtectionResult result;
     uint32_t key=LksProtection_EnterCritical();
     if (enable != 0u) {
+#ifdef M2_P1_DYNAMIC
+        ProtectionSnapshot s;
+        LksProtection_Read(&s);
+        if (enable==1u && s.config_valid && s.raw_valid && !s.raw &&
+            !(s.eif & MCPWM0_EIF_FAIL1_IF_BIT) && !s.moe &&
+            !(s.tclk & MCPWM0_TCLK_BASE_CNT0_EN_BIT)) {
+            GPIO_PinAFConfig(GPIO1, GPIO_PinSource_4+p1_output, AF3_MCPWM);
+            MCPWM0_PRT=PRT_UNLOCK;
+            MCPWM0_CNT0=(uint16_t)-2400;
+            MCPWM0_UPDATE=0x083fu; /* CNT0 and CH0/1/2 compare pairs. */
+            MCPWM0_TCLK |= MCPWM0_TCLK_BASE_CNT0_EN_BIT;
+            MCPWM0_FAIL012 |= MCPWM0_FAIL012_MOE_BIT;
+            __DSB();
+            MCPWM0_PRT=PRT_LOCK;
+            LksProtection_ExitCritical(key);
+            return PROTECTION_OK; /* Manager immediately checks readback and EIF. */
+        }
+#endif
         LksProtection_ExitCritical(key);
         return PROTECTION_BLOCKED;
     }
@@ -94,6 +140,9 @@ ProtectionResult LksProtection_SetMoe(uint32_t enable)
     result=((MCPWM0_FAIL012 & MCPWM0_FAIL012_MOE_BIT) ||
             (MCPWM0_TCLK & MCPWM0_TCLK_BASE_CNT0_EN_BIT)) ?
             PROTECTION_IO_ERROR : PROTECTION_OK;
+#ifdef M2_P1_DYNAMIC
+    board_pwm_inputs_off();
+#endif
     LksProtection_ExitCritical(key);
     return result;
 }
@@ -116,16 +165,121 @@ ProtectionResult LksProtection_Init(ProtectionSnapshot *boot)
     MCPWM_StructInit(&cfg);
     cfg.MCLK_EN=ENABLE;
     cfg.FAIL1_Signal_Sel=1u;
+#ifdef M2_P1_DYNAMIC
+    cfg.TH0=2400u;
+    cfg.TH00=cfg.TH10=cfg.TH20=(uint16_t)-600;
+    cfg.TH01=cfg.TH11=cfg.TH21=600u;
+    cfg.MCPWM_WorkModeCH0=cfg.MCPWM_WorkModeCH1=
+        cfg.MCPWM_WorkModeCH2=MCPWM0_CENTRAL_PWM_MODE;
+    /* N uses a constant physical low request while MOE is active. Only
+     * the selected pad is muxed; FAIL forces that N pad back high. */
+    cfg.CH0_NS=cfg.CH1_NS=cfg.CH2_NS=ENABLE;
+    cfg.CH0N_SCTRLN=cfg.CH1N_SCTRLN=cfg.CH2N_SCTRLN=MCPWM0_LOW_LEVEL;
+#endif
     lks560_pwm_set_off_defaults(&cfg);
     MCPWM_Init(&cfg);
     /* FAIL1_EN stays zero: clock/window/polarity not qualified.
        CMP/DAC initialization intentionally blocked; do not guess voltage codes. */
     LksProtection_Read(&current);
     if (!current.safe_config_matches) return PROTECTION_IO_ERROR;
+#ifdef M2_P1_DYNAMIC
+    if (!(boot->eif & MCPWM0_EIF_FAIL1_IF_BIT) &&
+        LksProtection_P0Init() && LksProtection_P1ProbeArm()) {
+        p1_prepared=1u;
+        return PROTECTION_OK;
+    }
+#endif
     return PROTECTION_BLOCKED;
 }
 ProtectionResult LksProtection_ClearFail(void)
 {
+#ifdef M2_P1_DYNAMIC
+    ProtectionSnapshot s;
+    ProtectionResult result=PROTECTION_BLOCKED;
+    uint32_t key=LksProtection_EnterCritical();
+    LksProtection_Read(&s);
+    if (s.config_valid && s.raw_valid && !s.raw && !s.moe &&
+        !(s.tclk & MCPWM0_TCLK_BASE_CNT0_EN_BIT)) {
+        MCPWM0_PRT=PRT_UNLOCK;
+        MCPWM0_EIF=MCPWM0_EIF_FAIL1_IF_BIT;
+        __DSB();
+        MCPWM0_PRT=PRT_LOCK;
+        LksProtection_Read(&s);
+        if (s.config_valid && s.raw_valid && !s.moe) {
+            result=(s.raw || (s.eif & FAIL1_FLAG)) ? PROTECTION_FAULT : PROTECTION_OK;
+        }
+    }
+    LksProtection_ExitCritical(key);
+    return result;
+#else
     /* Polarity and analog source are not qualified in this build. */
+#endif
     return PROTECTION_BLOCKED;
+}
+
+/* P0 only: observe the comparator without granting protection qualification. */
+uint32_t LksProtection_P0Init(void)
+{
+    GPIO_InitTypeDef gpio;
+    const uint32_t mux_mask=SYS_AFE_REG3_CMP1_SELP_MASK |
+                            SYS_AFE_REG3_CMP1_SELN_MASK;
+    const uint32_t mux_value=SYS_AFE_REG3_CMP1_SELP(CMP1_SELP_IP0) |
+                             SYS_AFE_REG3_CMP1_SELN(CMP_SELN_REF);
+    GPIO_StructInit(&gpio);
+    gpio.GPIO_Pin=GPIO_Pin_1;
+    gpio.GPIO_Mode=GPIO_Mode_ANA;
+    SYS_ModuleClockCmd(SYS_Module_GPIO, ENABLE);
+    GPIO_PinAFConfig(GPIO2, GPIO_PinSource_1, AF0_GPIO);
+    GPIO_Init(GPIO2, &gpio);
+    SYS_ModuleClockCmd(SYS_Module_CMP, ENABLE);
+    if (!(SYS_CLK_FEN & SYS_Module_CMP)) return 0u;
+
+    /* AFE manual section 5: BGPPD=0 enables the nominal 1.2 V reference.
+     * Wait conservatively before enabling CMP1; this is not a timing test. */
+    SYS_WR_PROTECT=0x7A83u;
+    SYS_AFE_REG5 &= ~SYS_AnalogModule_BGP;
+    SYS_WR_PROTECT=0u;
+    for (volatile uint32_t wait=0; wait<1024u; ++wait) __NOP();
+
+    SYS_WR_PROTECT=0x7A83u;
+    SYS_AFE_REG3=(SYS_AFE_REG3 & ~mux_mask) | mux_value;
+    SYS_AFE_REG5 |= SYS_AnalogModule_CMP1;
+    SYS_WR_PROTECT=0u;
+    return (SYS_AFE_REG3 & mux_mask)==mux_value &&
+           (SYS_AFE_REG5 & (SYS_AnalogModule_CMP1 | SYS_AnalogModule_BGP))==
+           SYS_AnalogModule_CMP1;
+}
+
+uint32_t LksProtection_P0ReadRaw(void)
+{
+    if (!(SYS_CLK_FEN & SYS_Module_CMP)) return 2u;
+    return (CMP->DATA & CMP_DATA_CMP1_RAW_DATA_BIT)!=0u;
+}
+
+
+/* Routing precheck only: keep GPIO defaults, CNT0 stopped and MOE clear. */
+uint32_t LksProtection_P1ProbeArm(void)
+{
+    ProtectionSnapshot s;
+    uint32_t key=LksProtection_EnterCritical();
+    uint32_t armed=0u;
+    const uint32_t cmp1_windows=CMP_BLCWIN_CMP1_CHN0P_WIN_EN_BIT |
+        CMP_BLCWIN_CMP1_CHN1P_WIN_EN_BIT | CMP_BLCWIN_CMP1_CHN2P_WIN_EN_BIT |
+        CMP_BLCWIN_CMP1_CHN3P_WIN_EN_BIT;
+    LksProtection_Read(&s);
+    if (s.safe_config_matches && LksProtection_P0ReadRaw()==0u &&
+        !(CMP->BLCWIN & cmp1_windows)) {
+        MCPWM0_PRT=PRT_UNLOCK;
+        MCPWM0_EIF=MCPWM0_EIF_FAIL1_IF_BIT;
+        if (!(MCPWM0_EIF & MCPWM0_EIF_FAIL1_IF_BIT)) {
+            MCPWM0_FAIL012=(s.fail012 & ~MCPWM0_FAIL012_FAIL1_POL_BIT) |
+                          MCPWM0_FAIL012_FAIL1_EN_BIT;
+            __DSB();
+            armed=(MCPWM0_FAIL012 & 0xC78u)==0x420u;
+            if (!armed) MCPWM0_FAIL012=s.fail012;
+        }
+        MCPWM0_PRT=PRT_LOCK;
+    }
+    LksProtection_ExitCritical(key);
+    return armed;
 }

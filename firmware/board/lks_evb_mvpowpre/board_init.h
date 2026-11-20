@@ -26,4 +26,7 @@ void board_pwm_inputs_off(void);
 /** @brief Toggle the logic-level heartbeat output P0.6. */
 void board_heartbeat_toggle(void);
 
+/* Detached-core-board P0 diagnostic stimulus. */
+void board_p0_stimulus_init(void);
+void board_p0_stimulus_set(uint32_t high);
 #endif /* BOARD_INIT_H */

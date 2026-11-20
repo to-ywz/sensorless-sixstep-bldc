@@ -44,4 +44,11 @@ ProtectionResult LksProtection_ClearFail(void);
 /* Save/restore PRIMASK; manager APIs may run in foreground or interrupt context. */
 uint32_t LksProtection_EnterCritical(void);
 void LksProtection_ExitCritical(uint32_t key);
+/* Diagnostic RAW is separate from the Manager qualification snapshot. */
+uint32_t LksProtection_P0Init(void);
+uint32_t LksProtection_P0ReadRaw(void);
+uint32_t LksProtection_P1ProbeArm(void);
+#ifdef M2_P1_DYNAMIC
+uint32_t LksProtection_SelectBenchOutput(uint32_t output);
+#endif
 #endif
