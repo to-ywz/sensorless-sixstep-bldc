@@ -8,7 +8,7 @@
 
 > **当前状态（2026-11-16）：V0.1-A5 隔离台架的三相低侧、三相自举及高侧短包、复位后无持续误开启、停止状态六管电源循环已有实测/用户反馈；A5整体仍为PARTIAL PASS。** 输入峰值合规[HW-001](hardware/issues/HW-001-mcpwm-edge-ringing.md)、掉电关断[HW-002](hardware/issues/HW-002-powerdown-gate-discharge.md)、实际双VGS瞬态非重叠及板载固件指纹尚未关闭。详见[A5唯一进度表](tests/reports/2026-11-15_V01-A5-progress.md)。
 >
-> **V02-00静态审计完成；V02-01平台接口与锁存状态机设计已归档，但固件/Bench仍未实现、未构建、未实测。** 下一步先处理FCLK门控编号、FAIL滤波时钟和CMP窗口关闭语义，再实现独立逻辑Bench。见[V02-00审计](tests/reports/2026-11-16_V02-00-static-audit.md)、[V02-01接口/状态机设计](tests/test_cases/V02-01-platform-interface-state-machine.md)及[V0.2总计划](tests/test_cases/V02-PLAN-000-workplan.md)。CMP/FAIL尚未实测，不接主功率母线或电机。
+> **当前保护/采样进度（2026-11-21）：M2核心功能关闭；M3方案商讨中，仅规划。** 外部CMP1→FAIL1、H1功能关断、H2保持、S1锁存、R1正常显式恢复及六路MCU pad安全态复用[既有M2证据](tests/reports/2026-11-18_M2-RTT-evidence.md)。H1最坏响应延迟和最小可检测故障脉宽转后续性能backlog；故障态复位为WAIVED_BY_USER / NOT VERIFIED，不重复安排。M3聚焦三相ADC/OPA测量可信性、PWM同步采样和六扇区电流可观测性，未经批准不执行硬件测试。当前总控、backlog及规划统一见[V0.2总计划](tests/test_cases/V02-PLAN-000-workplan.md)。M2关闭不等于V0.2整体、CBC或功率级验收通过，不接主功率母线或电机。
 
 ## 1. 项目目标（Target V1.0）
 
@@ -32,9 +32,9 @@
 | 控制方式 | Sensorless Six-Step / 120° 方波 | 已确定 |
 | 运行控制 | 速度闭环 | 已确定 |
 | 母线电压范围 | TBD | 待原理图/器件额定值核实 |
-| 电流采样拓扑、Rs、增益 | TBD | 待硬件审计 |
+| 电流采样拓扑、Rs、增益 | P-I三相低侧5mΩ；增益/标定TBD | [采样映射](hardware/boards/lks32mc071/sampling.md)；实物跳帽待核对 |
 | BEMF 输入通道及参考方式 | TBD | 待硬件审计 |
-| CMP 到 PWM 硬件关断链路 | TBD | 必须实测确认 |
+| CMP 到 PWM 硬件关断链路 | 外部CMP1→FAIL1→三相六路pad | M2核心功能关闭；真实电流阈值/CBC未验收 |
 | 温度传感器与输入通道 | TBD | 待硬件审计 |
 
 **重要：** 不要将历史讨论中的示例电压、电阻、采样增益或阈值直接当作本板参数。所有电气参数以当前实物、原理图、BOM、芯片手册和测量结果为准。
@@ -133,7 +133,7 @@ tools/         波形、日志和仿真辅助工具说明
 | A4 六步逻辑 | 主要功能已测，定量项保留 | [A4报告](tests/reports/2026-11-09_V01-A4-six-step-logic.md) |
 | A5 驱动台架 | 主要功能正常、**安全验收开放** | [A5当前证据矩阵](tests/reports/2026-11-15_V01-A5-progress.md)、[A5验收要求](tests/test_cases/V01-A5-driver-interface-gate.md) |
 | 硬件遗留问题 | HW-001记录保留，HW-002开放 | [问题列表](hardware/issues/README.md) |
-| V0.2 采样/逐波保护 | **V02-00静态审计完成；V02-01设计已归档；固件/Bench未实现/未实测** | [审计记录](tests/reports/2026-11-16_V02-00-static-audit.md)、[V02-01接口/状态机设计](tests/test_cases/V02-01-platform-interface-state-machine.md)、[阶段计划](tests/test_cases/V02-PLAN-000-workplan.md)、[内部保护链P0-P4](tests/test_cases/V02-PROT-001-internal-path-plan.md) |
+| V0.2 / M2 / M3 | **M2核心功能关闭；M3仅规划；V0.2整体未完成** | [唯一总计划与backlog](tests/test_cases/V02-PLAN-000-workplan.md)、[M2既有证据](tests/reports/2026-11-18_M2-RTT-evidence.md)、[采样映射](hardware/boards/lks32mc071/sampling.md) |
 | 自研下一版PCB | 单/双/三Shunt兼容为候选，不代表当前跳帽可改变功率拓扑 | [下一版板卡设计评审](hardware/boards/lks32mc071/next_revision.md) |
 
 **放行规则：** A5未关闭的安全风险不妨碍V0.2控制板**隔离逻辑级**研究；未取得保护闭环及功率级安全证据前，不接主母线/电机。V0.2逻辑级测试必须避免MCU向**未供电且仍相连的LKS560输入**施加超允许电压。

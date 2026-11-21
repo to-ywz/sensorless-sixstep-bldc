@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+### Milestone / documentation（2026-11-21）
+- 按用户确认关闭M2核心功能，复用外部CMP1→FAIL1、六路安全态、H1功能关断、H2保持、S1锁存及R1正常显式恢复证据；不把范围调整写成原R1全部判据实测PASS。
+- H1最坏响应延迟及最小可检测故障脉宽转后续性能优化backlog；故障态复位记WAIVED_BY_USER / NOT VERIFIED，不重复安排。
+- M3方案商讨中，仅规划三相ADC/OPA测量可信性、PWM同步采样和六扇区电流可观测性；未经批准不执行硬件测试。当前总控、backlog和扫描记录集中于[现有总计划](tests/test_cases/V02-PLAN-000-workplan.md)，[既有M2报告](tests/reports/2026-11-18_M2-RTT-evidence.md)保留历史证据。
+- 本次仅更新文档状态/入口/历史适用说明，无固件代码、构建、烧录、上电或硬件测试；V0.2整体/CBC/功率级仍未验收。下列早期条目按原日期作为历史变更保留。
+
+
 ### Design decision（2026-11-16）
 - 用户确认V0.2双级保护架构：**一级CBC逐波限流**负责本PWM周期截断和后续安全周期受控恢复；**二级严重故障锁存**负责持续/严重异常的停机与显式恢复。V02-01先在锁存模式验证CMP1→FAIL1异步硬件关断，不能将其当作CBC或V0.2最终PASS。
 - CMP1仅一路输入和FAIL自动恢复实际能力仍需核实；两级故障源、阈值与同步恢复机制均TBD，尚未写入固件/上板验证。更新[总计划](tests/test_cases/V02-PLAN-000-workplan.md)、[首轮保护链](tests/test_cases/V02-PROT-001-internal-path-plan.md)、[完整逐波验收](tests/test_cases/V02-PROT-001-cycle-current-limit.md)。
@@ -24,6 +31,6 @@
 - 建立A1～A5独立台架及共享安全输出极性修复；详细源码/测试变更以各阶段Git提交和报告为准。
 
 ### Not verified / open gates
-- 全六扇区真实电流采样及比较器过流阈值、CMP1 RAW→MCPWM FAIL1实物链、cycle-by-cycle恢复。
+- 全六扇区真实电流采样及比较器过流阈值、cycle-by-cycle恢复；CMP1 RAW→FAIL1隔离核心板功能已有M2证据，定量性能见backlog。
 - LKS560输入尖峰电气兼容、复位/失电纳秒瞬态与实际双VGS非重叠、功率级安全放行。
 - 尚无经过本项目完整验证的无感闭环电机控制固件。

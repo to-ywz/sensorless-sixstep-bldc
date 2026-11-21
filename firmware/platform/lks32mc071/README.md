@@ -1,5 +1,7 @@
 # LKS32MC071 Platform
 
+> **2026-11-21状态说明：** M2核心功能已按用户决策关闭；H1定量性能转后续backlog，故障态复位为WAIVED_BY_USER，不重复安排。当前结论与M3仅规划的授权边界见[总计划](../../../tests/test_cases/V02-PLAN-000-workplan.md)，实测复用[M2证据](../../../tests/reports/2026-11-18_M2-RTT-evidence.md)。下文旧“当前状态”、BLOCKED/未实现/未构建/未实测及操作建议按各自历史检查点理解，不是最新配置的统一结论；特定配置功能通过不代表资料冲突、全部硬件资格或CBC验收已关闭。
+
 实现 MCU 相关外设适配：时钟、MCPWM、ADC、CMP、Timer、GPIO、IRQ、Watchdog。
 
 要求：
