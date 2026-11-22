@@ -15,6 +15,18 @@ typedef struct {
     bool compare;
 } LksCurrentPwmEvent;
 
+/* Last ADC finish attempt, retained for Watch after STOP. */
+typedef struct {
+    uint32_t finish_count;
+    uint32_t pwm_cycle;
+    uint32_t adc_flags;
+    uint8_t sector;
+    bool attributed;
+    bool adc_idle;
+} LksCurrentDebug;
+
+extern volatile LksCurrentDebug g_m3_adc_debug;
+
 LksCurrentPwmEvent lks_current_pwm_event(void);
 void lks_current_clear_pwm_events(void);
 void lks_current_cancel(LksCurrentSampler *sampler);

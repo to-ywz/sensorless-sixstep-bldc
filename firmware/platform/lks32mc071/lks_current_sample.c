@@ -4,6 +4,8 @@
 
 #define SAMPLE_ADC_FLAGS (ADC_SF1_IF | ADC_HERR_IF | ADC_SERR_IF)
 #define ADC_CLEAR_BUS_CYCLES 20u
+
+volatile LksCurrentDebug g_m3_adc_debug;
 #define PWM_SAMPLE_FLAGS (MCPWM0_IF0_T0_IF_BIT | MCPWM0_IF0_TMR0_IF_BIT)
 
 static bool adc_idle(void)
@@ -64,6 +66,7 @@ void lks_current_init(LksCurrentSampler *sampler, int16_t compare_tick)
 {
     ADC_InitTypeDef config = {0};
 
+    g_m3_adc_debug = (LksCurrentDebug){0};
     ADC_StructInit(&config);
     ADC_Init(ADC0, &config);
     sampler->pending = false;
@@ -119,10 +122,12 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t now_cycle,
     if (sampler->trigger.in_window && sampler->trigger.phase_mask != 0) {
         uint32_t flags;
         uint8_t phase;
+        bool idle;
 
         ADC0->TRIG = 0;
         flags = ADC0->IF;
-        if (before_next_compare && adc_idle() && (flags & SAMPLE_ADC_FLAGS) == ADC_SF1_IF) {
+        idle = adc_idle();
+        if (before_next_compare && idle && (flags & SAMPLE_ADC_FLAGS) == ADC_SF1_IF) {
             for (phase = 0; phase < CURRENT_PHASES; ++phase) {
                 if (sampler->trigger.phase_mask & (1u << phase)) {
                     words[phase] = (uint16_t)ADC_GetConversionValue(ADC0, DAT0);
@@ -134,6 +139,12 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t now_cycle,
             sampler->needs_idle_init = true;
         }
         ADC_ClearIRQFlag(ADC0, SAMPLE_ADC_FLAGS);
+        g_m3_adc_debug.pwm_cycle = sampler->trigger.pwm_cycle;
+        g_m3_adc_debug.sector = sampler->trigger.sector;
+        g_m3_adc_debug.attributed = before_next_compare;
+        g_m3_adc_debug.adc_flags = flags;
+        g_m3_adc_debug.adc_idle = idle;
+        ++g_m3_adc_debug.finish_count;
     }
     *frame = current_sample(&sampler->trigger, words, received, false, now_cycle, 1u);
     sampler->pending = false;

@@ -131,6 +131,9 @@ static void test_pwm_adapter(void)
     mock_adc.IF = ADC_SF1_IF;
     assert(lks_current_finish(&sampler, 11, false, &frame));
     assert(frame.phase[2].status == CURRENT_MISSING && data_reads == 6);
+    assert(g_m3_adc_debug.finish_count == 1 && g_m3_adc_debug.pwm_cycle == 10);
+    assert(g_m3_adc_debug.sector == 1 && !g_m3_adc_debug.attributed);
+    assert(g_m3_adc_debug.adc_flags == ADC_SF1_IF && g_m3_adc_debug.adc_idle);
 
     lks_current_init(&sampler, 0);
     mock_adc.IF = ADC_SF1_IF;
