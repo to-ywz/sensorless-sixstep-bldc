@@ -4,7 +4,7 @@
 #include "../../firmware/platform/lks32mc071/bench_sixstep_output.h"
 #include "../../firmware/platform/lks32mc071/lks_current_sample.h"
 
-static uint32_t clock_ticks;
+static uint32_t clock_ticks, restart_prepare_ticks;
 static unsigned arms;
 static bool stopped, counter_running, startup_boundary, adc_ready;
 static bool brake, inject_stop_on_finish, check_stop_order;
@@ -21,6 +21,7 @@ int bench_sixstep_output_apply_synced(uint32_t sector, uint32_t duty,
 {
     assert(sector < 6 && duty == 250);
     counter_running = false;
+    clock_ticks += restart_prepare_ticks;
     prepare();
     if (brake) {
         return 0;
@@ -169,8 +170,16 @@ int main(void)
         adc_ready = true;
         tick(2200, -2351, true, true);
         assert(g_m3_frame_count == count && arms == previous_arms);
+        restart_prepare_ticks = 4900;
         apply(5);
         assert(g_m3_running && !g_m3_frame_current && g_m3_frame_count == count);
+        tick(22, -2378, false, false);
+        assert(g_m3_running && g_m3_frame_count == count);
+        adc_ready = true;
+        tick(2538, 160, false, true);
+        assert(g_m3_frame_count == count + 1 && g_m3_frame.sector == 5);
+        assert(g_m3_frame.valid_mask == 2 && g_m3_frame_current);
+        puts("PASS: restart preparation longer than a carrier does not time out first poll");
     }
     puts("PASS: incomplete and completed conversions retain old sector across restart");
     puts("PASS: physical STOP during finish and software STOP before finish suppress publication");

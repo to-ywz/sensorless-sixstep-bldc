@@ -164,6 +164,8 @@ void bench_current_poll(void)
         if (!bench_sixstep_output_apply_synced(request, BENCH_DUTY, prepare_restart)) {
             stop();
         } else {
+            /* Start the poll interval after the backend restarts CNT0. */
+            polled_at = bench_sixstep_clock();
             g_m3_running = 1;
             if (!sampler.pending) {
                 publish_missing();
