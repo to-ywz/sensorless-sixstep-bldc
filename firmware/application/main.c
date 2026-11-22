@@ -18,12 +18,15 @@
 
 #if (defined(BENCH_TEST_MCPWM_SINGLE) + defined(BENCH_TEST_MCPWM_COMPLEMENTARY) + \
      defined(BENCH_TEST_MCPWM_THREE_PAIR) + defined(BENCH_TEST_SIXSTEP_LOGIC) + \
-     defined(BENCH_TEST_GATE_DRIVER) + defined(BENCH_TEST_CMP_FAIL)) > 1
+     defined(BENCH_TEST_GATE_DRIVER) + defined(BENCH_TEST_CMP_FAIL) + \
+     defined(BENCH_TEST_CURRENT_SAMPLE)) > 1
 #error "Select only one MCPWM bench test"
 #endif
 
 #if defined(BENCH_TEST_CMP_FAIL)
 #include "../tests/bench_cmp_fail/bench_cmp_fail.h"
+#elif defined(BENCH_TEST_CURRENT_SAMPLE)
+#include "../tests/bench_current/bench_current.h"
 #elif defined(BENCH_TEST_GATE_DRIVER)
 #include "test_gate_driver.h"
 #elif defined(BENCH_TEST_SIXSTEP_LOGIC)
@@ -36,6 +39,7 @@
 #include "test_mcpwm_single.h"
 #endif
 
+#if !defined(BENCH_TEST_CURRENT_SAMPLE)
 /**
  * @brief Approximate, noncalibrated bench delay.
  */
@@ -46,6 +50,8 @@ static void bench_delay(volatile uint32_t iterations)
     }
 }
 
+#endif
+
 int main(void)
 {
     board_init_safe();
@@ -53,6 +59,9 @@ int main(void)
 #if defined(BENCH_TEST_CMP_FAIL)
     bench_cmp_fail_init();
     for (;;) { bench_cmp_fail_poll(); }
+#elif defined(BENCH_TEST_CURRENT_SAMPLE)
+    bench_current_init(0);
+    for (;;) { bench_current_poll(); }
 #elif defined(BENCH_TEST_GATE_DRIVER)
     bench_gate_driver_init();
     for (;;) {

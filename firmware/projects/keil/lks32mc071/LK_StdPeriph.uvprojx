@@ -436,6 +436,21 @@
               <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
             </File>
             <File>
+              <FileName>current_sample.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\motor\current\current_sample.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks_current_sample.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks_current_sample.c</FilePath>
+            </File>
+            <File>
+              <FileName>bench_current.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench_current\bench_current.c</FilePath>
+            </File>
+            <File>
               <FileName>bench_sixstep_output.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\platform\lks32mc071\bench_sixstep_output.c</FilePath>
@@ -1009,6 +1024,21 @@
               <FileName>sixstep_table.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
+            </File>
+            <File>
+              <FileName>current_sample.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\motor\current\current_sample.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks_current_sample.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks_current_sample.c</FilePath>
+            </File>
+            <File>
+              <FileName>bench_current.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\tests\bench_current\bench_current.c</FilePath>
             </File>
             <File>
               <FileName>bench_sixstep_output.c</FileName>

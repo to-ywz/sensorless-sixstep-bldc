@@ -11,7 +11,7 @@
 #ifndef BENCH_A4_CLOCK_HZ
 #define BENCH_A4_CLOCK_HZ 48000000u
 #endif
-#define PERIOD 2400u
+#define PERIOD ((uint32_t)BENCH_SIXSTEP_HALF_PERIOD_TICKS)
 #define TICK_MASK 0x00ffffffu
 /* Register basis: SDK V3.16 Include/lks32mc07x_user_manual.h and
  * user_manual/13_MCPWM.md, IO01/IO23, UPDATE, TCLK, FAIL012 and PRT.
@@ -102,7 +102,24 @@ void bench_sixstep_output_init(void)
     MCPWM_Init(&cfg);
     bench_sixstep_output_stop();
 }
-static int apply_requests(uint32_t pwm_phase, uint32_t sink_phase, uint32_t duty_permille)
+void bench_sixstep_stop_input_init(void)
+{
+    GPIO_InitTypeDef gpio;
+    GPIO_PinAFConfig(GPIO2, GPIO_PinSource_12, AF0_GPIO);
+    GPIO_StructInit(&gpio);
+    gpio.GPIO_Pin = GPIO_Pin_12;
+    gpio.GPIO_Mode = GPIO_Mode_IN;
+    gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(GPIO2, &gpio);
+}
+
+int bench_sixstep_stop_requested(void)
+{
+    return GPIO_ReadInputDataBit(GPIO2, GPIO_Pin_12) == 0u;
+}
+
+static int apply_requests(uint32_t pwm_phase, uint32_t sink_phase, uint32_t duty_permille,
+                          BenchPwmBeforeRestart prepare)
 {
     uint32_t pin, i, io[3], width;
     int32_t half;
@@ -138,6 +155,9 @@ static int apply_requests(uint32_t pwm_phase, uint32_t sink_phase, uint32_t duty
     blank_delay();
     for (pin=BOARD_PWM_FIRST_PIN;pin<=BOARD_PWM_LAST_PIN;++pin)
         GPIO_PinAFConfig(GPIO1,pin,AF3_MCPWM);
+    if (prepare != 0) {
+        prepare();
+    }
     /* Check physical STOP again immediately before enabling. */
     if (GPIO_ReadInputDataBit(GPIO2,GPIO_Pin_12)==0u) {
         bench_sixstep_output_stop(); return 0;
@@ -151,12 +171,18 @@ static int apply_requests(uint32_t pwm_phase, uint32_t sink_phase, uint32_t duty
 
 int bench_sixstep_output_apply(uint32_t sector, uint32_t duty_permille)
 {
+    return bench_sixstep_output_apply_synced(sector, duty_permille, 0);
+}
+
+int bench_sixstep_output_apply_synced(uint32_t sector, uint32_t duty_permille,
+                                    BenchPwmBeforeRestart prepare)
+{
     SixstepState state;
     if (!sixstep_get(sector, &state)) {
         bench_sixstep_output_stop();
         return 0;
     }
-    return apply_requests(state.pwm_phase, state.sink_phase, duty_permille);
+    return apply_requests(state.pwm_phase, state.sink_phase, duty_permille, prepare);
 }
 
 int bench_gate_output_apply(uint32_t phase, uint32_t high_pwm)
@@ -165,5 +191,5 @@ int bench_gate_output_apply(uint32_t phase, uint32_t high_pwm)
         bench_sixstep_output_stop();
         return 0;
     }
-    return apply_requests(high_pwm ? phase : 255u, high_pwm ? 255u : phase, 250u);
+    return apply_requests(high_pwm ? phase : 255u, high_pwm ? 255u : phase, 250u, 0);
 }

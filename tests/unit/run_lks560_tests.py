@@ -10,6 +10,7 @@ from check_protection_gates import check as check_protection_gates
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cc', default='gcc', help='Host C99 GCC-compatible compiler')
+parser.add_argument('--current-only', action='store_true', help='Run only M3 current sampling Mock')
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 platform = 'firmware/platform/lks32mc071'
@@ -17,8 +18,15 @@ board = 'firmware/board/lks_evb_mvpowpre'
 bench = 'firmware/tests/bench'
 model = 'firmware/motor/commutation'
 protection = 'firmware/application/protection'
-check_protection_gates(root)
+if not args.current_only:
+    check_protection_gates(root)
 cases = [
+    ('current', ['tests/unit/current_fakes', platform],
+     ['tests/unit/test_current_sample.c', 'firmware/motor/current/current_sample.c',
+      platform+'/lks_current_sample.c', model+'/sixstep_table.c']),
+    ('current-bench', [],
+     ['tests/unit/test_bench_current.c', 'firmware/tests/bench_current/bench_current.c',
+      'firmware/motor/current/current_sample.c', model+'/sixstep_table.c']),
     ('protection', ['tests/unit', platform, protection],
      ['tests/unit/test_protection_manager.c', 'tests/unit/protection_fake_platform.c',
       protection+'/protection_manager.c']),
@@ -35,6 +43,8 @@ cases = [
 ]
 with tempfile.TemporaryDirectory(prefix='lks560-tests-') as temp:
     for name, includes, sources in cases:
+        if args.current_only and not name.startswith('current'):
+            continue
         exe = str(Path(temp)/(name+'.exe'))
         subprocess.run([args.cc, '-std=c99', '-Wall', '-Wextra', '-Werror']+
                        ['-I'+str(root/p) for p in includes]+
