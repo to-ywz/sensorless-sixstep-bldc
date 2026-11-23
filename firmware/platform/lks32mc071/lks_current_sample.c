@@ -13,11 +13,23 @@ static bool adc_idle(void)
     return (ADC0->CFG & ADCx_CFG_FSM_RS_BIT) == 0u;
 }
 
-bool lks_current_result_ready(void)
+static void close_trigger(LksCurrentSampler *sampler)
+{
+    ADC0->TRIG = 0;
+    sampler->trigger_closed_at = bench_sixstep_clock();
+    sampler->boundary_at_close = (MCPWM0_IF0 & MCPWM0_IF0_T0_IF_BIT) != 0u;
+    sampler->trigger_closed = true;
+}
+
+bool lks_current_close_if_ready(LksCurrentSampler *sampler)
 {
     uint32_t flags = ADC0->IF;
-    return (flags & (ADC_HERR_IF | ADC_SERR_IF)) != 0u ||
-           ((flags & ADC_SF1_IF) != 0u && adc_idle());
+    if ((flags & (ADC_HERR_IF | ADC_SERR_IF)) == 0u &&
+        ((flags & ADC_SF1_IF) == 0u || !adc_idle())) {
+        return false;
+    }
+    close_trigger(sampler);
+    return true;
 }
 
 static bool clear_adc_flags(void)
@@ -100,6 +112,7 @@ bool lks_current_arm(LksCurrentSampler *sampler, uint32_t cycle, uint8_t sector,
 
     sampler->trigger = current_trigger(cycle, sector, in_window, false, calibration);
     sampler->pending = true;
+    sampler->trigger_closed = false;
     if (!in_window) {
         return true;
     }
@@ -131,9 +144,9 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t now_cycle,
         uint8_t phase;
         bool idle;
 
-        ADC0->TRIG = 0;
-        sampler->trigger_closed_at = bench_sixstep_clock();
-        sampler->boundary_at_close = (MCPWM0_IF0 & MCPWM0_IF0_T0_IF_BIT) != 0u;
+        if (!sampler->trigger_closed) {
+            close_trigger(sampler);
+        }
         flags = ADC0->IF;
         idle = adc_idle();
         if (before_next_compare && idle && (flags & SAMPLE_ADC_FLAGS) == ADC_SF1_IF) {

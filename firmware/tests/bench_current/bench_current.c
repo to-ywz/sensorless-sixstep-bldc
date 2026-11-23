@@ -100,7 +100,7 @@ static void service_sample(LksCurrentPwmEvent event)
 
     if (event.boundary || (deadline && !matched)) {
         reason = BENCH_PWM_FINISH_ATTRIBUTION_LOST;
-    } else if (matched && lks_current_result_ready()) {
+    } else if (matched && lks_current_close_if_ready(&sampler)) {
         reason = deadline ? BENCH_PWM_FINISH_ATTRIBUTION_LOST : BENCH_PWM_FINISH_ADC_READY;
     } else if (deadline) {
         reason = BENCH_PWM_FINISH_ADC_TIMEOUT;

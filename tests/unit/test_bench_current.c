@@ -5,7 +5,7 @@
 #include "../../firmware/platform/lks32mc071/lks_current_sample.h"
 
 static uint32_t clock_ticks, restart_prepare_ticks;
-static uint32_t close_delay_ticks, publish_delay_ticks;
+static uint32_t close_delay_ticks, finish_entry_ticks, publish_delay_ticks;
 static unsigned arms;
 static bool stopped, counter_running, startup_boundary, adc_ready;
 static bool brake, inject_stop_on_finish, check_stop_order;
@@ -40,7 +40,22 @@ void lks_current_init(LksCurrentSampler *sampler, int16_t compare_tick)
     *sampler = (LksCurrentSampler){0};
 }
 LksCurrentPwmEvent lks_current_pwm_event(void) { return event; }
-bool lks_current_result_ready(void) { return adc_ready; }
+static void close_trigger(LksCurrentSampler *sampler)
+{
+    clock_ticks += close_delay_ticks;
+    sampler->trigger_closed_at = clock_ticks;
+    sampler->boundary_at_close = event.boundary;
+    sampler->trigger_closed = true;
+}
+
+bool lks_current_close_if_ready(LksCurrentSampler *sampler)
+{
+    if (!adc_ready) {
+        return false;
+    }
+    close_trigger(sampler);
+    return true;
+}
 void lks_current_clear_pwm_events(void) { event.boundary = event.compare = false; }
 
 void lks_current_cancel(LksCurrentSampler *sampler)
@@ -69,6 +84,7 @@ bool lks_current_arm(LksCurrentSampler *sampler, uint32_t cycle, uint8_t sector,
     assert(!event.boundary && !event.compare);
     sampler->trigger = current_trigger(cycle, sector, in_window, false, calibration);
     sampler->pending = true;
+    sampler->trigger_closed = false;
     ++arms;
     return true;
 }
@@ -79,9 +95,11 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t cycle,
     const uint16_t words[CURRENT_PHASES] = {0x0800, 0x0800, 0x0800};
     uint8_t mask = adc_ready && attributed ? sampler->trigger.phase_mask : 0;
     assert(sampler->pending);
-    clock_ticks += close_delay_ticks;
-    sampler->trigger_closed_at = clock_ticks;
-    sampler->boundary_at_close = event.boundary;
+    clock_ticks += finish_entry_ticks;
+    assert(!attributed || sampler->trigger_closed);
+    if (!sampler->trigger_closed) {
+        close_trigger(sampler);
+    }
     *frame = current_sample(&sampler->trigger, words, mask, false, cycle, 1);
     sampler->pending = false;
     sampler->needs_idle_init = !mask;
@@ -218,12 +236,14 @@ int main(void)
         uint32_t count = g_m3_frame_count;
         apply(0);
         adc_ready = true;
+        finish_entry_ticks = 327;
         publish_delay_ticks = 40;
         tick(3169, 537, false, true);
         assert(g_m3_frame_count == count + 1 && g_m3_frame.raw_mask == 2);
         assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ADC_READY);
         assert(g_m3_pwm_debug.close_elapsed_ticks == 3169);
 
+        finish_entry_ticks = 0;
         publish_delay_ticks = 0;
         close_delay_ticks = 31;
         apply(0);

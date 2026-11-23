@@ -103,9 +103,16 @@ static void test_pwm_adapter(void)
     for (sector = 0; sector < 6; ++sector) {
         assert(lks_current_arm(&sampler, sector, sector, true, &cal));
         assert(mock_adc.TRIG == ADC_TRIG_MCPWM0_T0 && selected_channel == 2 - sink[sector]);
+        assert(!lks_current_close_if_ready(&sampler));
+        assert(mock_adc.TRIG == ADC_TRIG_MCPWM0_T0);
         mock_adc.IF = ADC_SF1_IF;
+        assert(lks_current_close_if_ready(&sampler));
+        assert(mock_adc.TRIG == 0 && sampler.trigger_closed_at == bus_tick);
+        assert(!sampler.boundary_at_close);
+        bus_tick += 327;
         assert(!lks_current_arm(&sampler, sector + 1, (sector + 1) % 6, true, &cal));
         assert(lks_current_finish(&sampler, sector + 1, true, &frame));
+        assert(sampler.trigger_closed_at == bus_tick - 327);
         assert(frame.sector == sector && frame.pwm_cycle == sector);
         assert(frame.valid_mask == (1u << sink[sector]));
         assert(frame.phase[sink[sector]].microamps == 100 * (sink[sector] + 1));

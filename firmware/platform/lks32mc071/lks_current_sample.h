@@ -7,6 +7,7 @@ typedef struct {
     CurrentTrigger trigger;
     uint32_t trigger_closed_at;
     bool boundary_at_close;
+    bool trigger_closed;
     bool pending;
     bool needs_idle_init;
 } LksCurrentSampler;
@@ -33,8 +34,8 @@ LksCurrentPwmEvent lks_current_pwm_event(void);
 void lks_current_clear_pwm_events(void);
 void lks_current_cancel(LksCurrentSampler *sampler);
 bool lks_current_recover(LksCurrentSampler *sampler);
-/* Read only; neither acknowledges flags nor disarms TADC0. */
-bool lks_current_result_ready(void);
+/* On completion or error, mask TADC0 and snapshot timing before Finish. */
+bool lks_current_close_if_ready(LksCurrentSampler *sampler);
 
 /* Exclusive ADC0 and TMR0 ownership. Call with ADC idle, after MCPWM clock setup.
  * The board owner configures OPA and supplies the verified compare/window policy.
