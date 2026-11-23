@@ -19,6 +19,7 @@ volatile uint32_t g_m3_command, g_m3_requested_sector;
 volatile uint32_t g_m3_running, g_m3_frame_count, g_m3_timing_faults;
 volatile CurrentSampleFrame g_m3_frame;
 volatile bool g_m3_frame_current;
+volatile BenchCurrentPwmDebug g_m3_pwm_debug;
 
 static LksCurrentSampler sampler;
 /* Until a board calibration exists, publish raw data with UNCALIBRATED status. */
@@ -94,6 +95,7 @@ void bench_current_init(const CurrentCalibration *board_calibration)
     g_m3_command = g_m3_requested_sector = 0;
     g_m3_running = g_m3_frame_count = g_m3_timing_faults = 0;
     g_m3_frame = (CurrentSampleFrame){0};
+    g_m3_pwm_debug = (BenchCurrentPwmDebug){0};
     g_m3_frame_current = false;
 }
 
@@ -136,10 +138,18 @@ void bench_current_poll(void)
             }
         }
         if (sampler.pending) {
-            bool timely = (uint32_t)(bench_sixstep_clock() - armed_at) < ATTRIBUTION_TICKS;
+            uint32_t elapsed = bench_sixstep_clock() - armed_at;
+            bool timely = elapsed < ATTRIBUTION_TICKS;
             if (!timely || event.boundary || event.tick >= FINISH_EARLIEST) {
+                uint32_t sample_cycle = sampler.trigger.pwm_cycle;
                 finish_period(timely && !event.boundary && event.compare &&
                               event.tick >= FINISH_EARLIEST && event.tick <= FINISH_LATEST);
+                g_m3_pwm_debug.pwm_cycle = sample_cycle;
+                g_m3_pwm_debug.elapsed_ticks = elapsed;
+                g_m3_pwm_debug.counter_tick = event.tick;
+                g_m3_pwm_debug.boundary = event.boundary;
+                g_m3_pwm_debug.compare = event.compare;
+                ++g_m3_pwm_debug.finish_count;
             }
         }
         if (!g_m3_running) {

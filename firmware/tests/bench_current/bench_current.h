@@ -16,6 +16,18 @@ extern volatile uint32_t g_m3_running, g_m3_frame_count, g_m3_timing_faults;
 extern volatile CurrentSampleFrame g_m3_frame;
 extern volatile bool g_m3_frame_current;
 
+/* Last PWM-driven finish decision. Match pwm_cycle to the ADC snapshot. */
+typedef struct {
+    uint32_t finish_count;
+    uint32_t pwm_cycle;
+    uint32_t elapsed_ticks;
+    int16_t counter_tick;
+    bool boundary;
+    bool compare;
+} BenchCurrentPwmDebug;
+
+extern volatile BenchCurrentPwmDebug g_m3_pwm_debug;
+
 void bench_current_init(const CurrentCalibration *board_calibration);
 void bench_current_poll(void);
 

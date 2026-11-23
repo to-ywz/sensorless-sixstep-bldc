@@ -119,6 +119,9 @@ int main(void)
     tick(2480, 160, false, true);
     assert(g_m3_frame.pwm_cycle == 1 && g_m3_frame.sector == 0);
     assert(g_m3_frame.valid_mask == 2 && g_m3_frame.calibration_version == 7);
+    assert(g_m3_pwm_debug.finish_count == 1 && g_m3_pwm_debug.pwm_cycle == 1);
+    assert(g_m3_pwm_debug.counter_tick == 160 && g_m3_pwm_debug.elapsed_ticks == 2560);
+    assert(!g_m3_pwm_debug.boundary && g_m3_pwm_debug.compare);
     tick(10, 170, false, true);
     assert(g_m3_frame_count == 1 && arms == 1);
 
