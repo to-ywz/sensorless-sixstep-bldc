@@ -13,6 +13,13 @@ static bool adc_idle(void)
     return (ADC0->CFG & ADCx_CFG_FSM_RS_BIT) == 0u;
 }
 
+bool lks_current_result_ready(void)
+{
+    uint32_t flags = ADC0->IF;
+    return (flags & (ADC_HERR_IF | ADC_SERR_IF)) != 0u ||
+           ((flags & ADC_SF1_IF) != 0u && adc_idle());
+}
+
 static bool clear_adc_flags(void)
 {
     uint32_t start;

@@ -6,8 +6,8 @@ enum {
     BENCH_DUTY = 250,
     SAMPLE_COMPARE = 0,
     ARM_LATEST = -512,
-    FINISH_EARLIEST = 128,
-    FINISH_LATEST = 512,
+    /* Leave a guard before the counter wraps to the next PWM cycle. */
+    FINISH_DEADLINE = BENCH_SIXSTEP_HALF_PERIOD_TICKS - 512,
     /* Shared A4 carrier is 4801 ticks at the same 48 MHz as SysTick.
      * This bound includes arm preparation and is strictly below one carrier.
      */
@@ -84,6 +84,35 @@ static void finish_period(bool attributed)
     g_m3_frame_current = true;
 }
 
+static void service_sample(LksCurrentPwmEvent event)
+{
+    uint32_t elapsed = bench_sixstep_clock() - armed_at;
+    bool deadline = elapsed >= ATTRIBUTION_TICKS || event.tick >= FINISH_DEADLINE;
+    bool matched = event.compare && event.tick >= SAMPLE_COMPARE && !event.boundary;
+    BenchCurrentFinishReason reason;
+    uint32_t sample_cycle;
+
+    if (event.boundary || (deadline && !matched)) {
+        reason = BENCH_PWM_FINISH_ATTRIBUTION_LOST;
+    } else if (matched && lks_current_result_ready()) {
+        reason = deadline ? BENCH_PWM_FINISH_ATTRIBUTION_LOST : BENCH_PWM_FINISH_ADC_READY;
+    } else if (deadline) {
+        reason = BENCH_PWM_FINISH_ADC_TIMEOUT;
+    } else {
+        return;
+    }
+
+    sample_cycle = sampler.trigger.pwm_cycle;
+    finish_period(reason == BENCH_PWM_FINISH_ADC_READY);
+    g_m3_pwm_debug.pwm_cycle = sample_cycle;
+    g_m3_pwm_debug.elapsed_ticks = elapsed;
+    g_m3_pwm_debug.counter_tick = event.tick;
+    g_m3_pwm_debug.reason = reason;
+    g_m3_pwm_debug.boundary = event.boundary;
+    g_m3_pwm_debug.compare = event.compare;
+    ++g_m3_pwm_debug.finish_count;
+}
+
 void bench_current_init(const CurrentCalibration *board_calibration)
 {
     bench_sixstep_stop_input_init();
@@ -138,19 +167,7 @@ void bench_current_poll(void)
             }
         }
         if (sampler.pending) {
-            uint32_t elapsed = bench_sixstep_clock() - armed_at;
-            bool timely = elapsed < ATTRIBUTION_TICKS;
-            if (!timely || event.boundary || event.tick >= FINISH_EARLIEST) {
-                uint32_t sample_cycle = sampler.trigger.pwm_cycle;
-                finish_period(timely && !event.boundary && event.compare &&
-                              event.tick >= FINISH_EARLIEST && event.tick <= FINISH_LATEST);
-                g_m3_pwm_debug.pwm_cycle = sample_cycle;
-                g_m3_pwm_debug.elapsed_ticks = elapsed;
-                g_m3_pwm_debug.counter_tick = event.tick;
-                g_m3_pwm_debug.boundary = event.boundary;
-                g_m3_pwm_debug.compare = event.compare;
-                ++g_m3_pwm_debug.finish_count;
-            }
+            service_sample(event);
         }
         if (!g_m3_running) {
             return;

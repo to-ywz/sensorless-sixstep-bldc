@@ -39,6 +39,7 @@ void lks_current_init(LksCurrentSampler *sampler, int16_t compare_tick)
     *sampler = (LksCurrentSampler){0};
 }
 LksCurrentPwmEvent lks_current_pwm_event(void) { return event; }
+bool lks_current_result_ready(void) { return adc_ready; }
 void lks_current_clear_pwm_events(void) { event.boundary = event.compare = false; }
 
 void lks_current_cancel(LksCurrentSampler *sampler)
@@ -183,6 +184,30 @@ int main(void)
         assert(g_m3_frame_count == count + 1 && g_m3_frame.sector == 5);
         assert(g_m3_frame.valid_mask == 2 && g_m3_frame_current);
         puts("PASS: restart preparation longer than a carrier does not time out first poll");
+    }
+    {
+        uint32_t count = g_m3_frame_count;
+        apply(0);
+        tick(2560, 160, false, true);
+        assert(g_m3_frame_count == count);
+        adc_ready = true;
+        tick(550, 710, false, true);
+        assert(g_m3_frame_count == count + 1 && g_m3_frame.valid_mask == 2);
+        assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ADC_READY);
+
+        apply(0);
+        tick(2560, 160, false, true);
+        assert(g_m3_frame_count == count + 1);
+        tick(640, 800, false, true);
+        assert(g_m3_frame_count == count + 2 && g_m3_frame.phase[1].status == CURRENT_MISSING);
+        assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ADC_TIMEOUT);
+
+        apply(0);
+        adc_ready = true;
+        tick(3200, 800, false, true);
+        assert(g_m3_frame_count == count + 3 && g_m3_frame.valid_mask == 0);
+        assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ATTRIBUTION_LOST);
+        puts("PASS: hardware completion can arrive late within a known cycle; deadline rejects it");
     }
     puts("PASS: incomplete and completed conversions retain old sector across restart");
     puts("PASS: physical STOP during finish and software STOP before finish suppress publication");

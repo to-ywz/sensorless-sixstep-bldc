@@ -16,12 +16,20 @@ extern volatile uint32_t g_m3_running, g_m3_frame_count, g_m3_timing_faults;
 extern volatile CurrentSampleFrame g_m3_frame;
 extern volatile bool g_m3_frame_current;
 
+typedef enum {
+    BENCH_PWM_FINISH_NONE,
+    BENCH_PWM_FINISH_ADC_READY,
+    BENCH_PWM_FINISH_ADC_TIMEOUT,
+    BENCH_PWM_FINISH_ATTRIBUTION_LOST
+} BenchCurrentFinishReason;
+
 /* Last PWM-driven finish decision. Match pwm_cycle to the ADC snapshot. */
 typedef struct {
     uint32_t finish_count;
     uint32_t pwm_cycle;
     uint32_t elapsed_ticks;
     int16_t counter_tick;
+    BenchCurrentFinishReason reason;
     bool boundary;
     bool compare;
 } BenchCurrentPwmDebug;

@@ -31,6 +31,8 @@ LksCurrentPwmEvent lks_current_pwm_event(void);
 void lks_current_clear_pwm_events(void);
 void lks_current_cancel(LksCurrentSampler *sampler);
 bool lks_current_recover(LksCurrentSampler *sampler);
+/* Read only; neither acknowledges flags nor disarms TADC0. */
+bool lks_current_result_ready(void);
 
 /* Exclusive ADC0 and TMR0 ownership. Call with ADC idle, after MCPWM clock setup.
  * The board owner configures OPA and supplies the verified compare/window policy.
