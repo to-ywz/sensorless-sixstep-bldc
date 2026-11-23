@@ -132,6 +132,8 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t now_cycle,
         bool idle;
 
         ADC0->TRIG = 0;
+        sampler->trigger_closed_at = bench_sixstep_clock();
+        sampler->boundary_at_close = (MCPWM0_IF0 & MCPWM0_IF0_T0_IF_BIT) != 0u;
         flags = ADC0->IF;
         idle = adc_idle();
         if (before_next_compare && idle && (flags & SAMPLE_ADC_FLAGS) == ADC_SF1_IF) {

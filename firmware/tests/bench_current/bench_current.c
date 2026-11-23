@@ -61,6 +61,12 @@ static void prepare_restart(void)
     (void)lks_current_arm(&sampler, cycle, sector, true, &calibration);
 }
 
+static bool closed_in_period(void)
+{
+    return !sampler.boundary_at_close &&
+           (uint32_t)(sampler.trigger_closed_at - armed_at) < ATTRIBUTION_TICKS;
+}
+
 static void finish_period(bool attributed)
 {
     CurrentSampleFrame frame;
@@ -71,7 +77,7 @@ static void finish_period(bool attributed)
         stop();
         return;
     }
-    if ((uint32_t)(bench_sixstep_clock() - armed_at) >= ATTRIBUTION_TICKS || !attributed) {
+    if (!attributed || !closed_in_period()) {
         const uint16_t empty[CURRENT_PHASES] = {0};
         frame = current_sample(&sampler.trigger, empty, 0, false, cycle, 0);
         lks_current_cancel(&sampler);
@@ -106,8 +112,10 @@ static void service_sample(LksCurrentPwmEvent event)
     finish_period(reason == BENCH_PWM_FINISH_ADC_READY);
     g_m3_pwm_debug.pwm_cycle = sample_cycle;
     g_m3_pwm_debug.elapsed_ticks = elapsed;
+    g_m3_pwm_debug.close_elapsed_ticks = sampler.trigger_closed_at - armed_at;
     g_m3_pwm_debug.counter_tick = event.tick;
-    g_m3_pwm_debug.reason = reason;
+    g_m3_pwm_debug.reason = reason == BENCH_PWM_FINISH_ADC_READY && !closed_in_period() ?
+                            BENCH_PWM_FINISH_ATTRIBUTION_LOST : reason;
     g_m3_pwm_debug.boundary = event.boundary;
     g_m3_pwm_debug.compare = event.compare;
     ++g_m3_pwm_debug.finish_count;

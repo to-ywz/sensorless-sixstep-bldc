@@ -5,6 +5,8 @@
 
 typedef struct {
     CurrentTrigger trigger;
+    uint32_t trigger_closed_at;
+    bool boundary_at_close;
     bool pending;
     bool needs_idle_init;
 } LksCurrentSampler;

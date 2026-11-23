@@ -28,6 +28,7 @@ typedef struct {
     uint32_t finish_count;
     uint32_t pwm_cycle;
     uint32_t elapsed_ticks;
+    uint32_t close_elapsed_ticks;
     int16_t counter_tick;
     BenchCurrentFinishReason reason;
     bool boundary;

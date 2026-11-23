@@ -5,6 +5,7 @@
 #include "../../firmware/platform/lks32mc071/lks_current_sample.h"
 
 static uint32_t clock_ticks, restart_prepare_ticks;
+static uint32_t close_delay_ticks, publish_delay_ticks;
 static unsigned arms;
 static bool stopped, counter_running, startup_boundary, adc_ready;
 static bool brake, inject_stop_on_finish, check_stop_order;
@@ -78,10 +79,14 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t cycle,
     const uint16_t words[CURRENT_PHASES] = {0x0800, 0x0800, 0x0800};
     uint8_t mask = adc_ready && attributed ? sampler->trigger.phase_mask : 0;
     assert(sampler->pending);
+    clock_ticks += close_delay_ticks;
+    sampler->trigger_closed_at = clock_ticks;
+    sampler->boundary_at_close = event.boundary;
     *frame = current_sample(&sampler->trigger, words, mask, false, cycle, 1);
     sampler->pending = false;
     sampler->needs_idle_init = !mask;
     adc_ready = false;
+    clock_ticks += publish_delay_ticks;
     if (inject_stop_on_finish) {
         brake = true;
     }
@@ -208,6 +213,26 @@ int main(void)
         assert(g_m3_frame_count == count + 3 && g_m3_frame.valid_mask == 0);
         assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ATTRIBUTION_LOST);
         puts("PASS: hardware completion can arrive late within a known cycle; deadline rejects it");
+    }
+    {
+        uint32_t count = g_m3_frame_count;
+        apply(0);
+        adc_ready = true;
+        publish_delay_ticks = 40;
+        tick(3169, 537, false, true);
+        assert(g_m3_frame_count == count + 1 && g_m3_frame.raw_mask == 2);
+        assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ADC_READY);
+        assert(g_m3_pwm_debug.close_elapsed_ticks == 3169);
+
+        publish_delay_ticks = 0;
+        close_delay_ticks = 31;
+        apply(0);
+        adc_ready = true;
+        tick(3169, 537, false, true);
+        assert(g_m3_frame_count == count + 2 && g_m3_frame.raw_mask == 0);
+        assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ATTRIBUTION_LOST);
+        assert(g_m3_pwm_debug.close_elapsed_ticks == 3200);
+        puts("PASS: deadline applies to trigger closure, not frame publication");
     }
     puts("PASS: incomplete and completed conversions retain old sector across restart");
     puts("PASS: physical STOP during finish and software STOP before finish suppress publication");
