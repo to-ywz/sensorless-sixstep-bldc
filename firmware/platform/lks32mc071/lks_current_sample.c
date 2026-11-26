@@ -4,6 +4,7 @@
 
 #define SAMPLE_ADC_FLAGS (ADC_SF1_IF | ADC_HERR_IF | ADC_SERR_IF)
 #define ADC_CLEAR_BUS_CYCLES 20u
+#define ADC_STATIC_TIMEOUT_TICKS 4800u
 
 volatile LksCurrentDebug g_m3_adc_debug;
 #define PWM_SAMPLE_FLAGS (MCPWM0_IF0_T0_IF_BIT | MCPWM0_IF0_TMR0_IF_BIT)
@@ -98,8 +99,9 @@ void lks_current_init(LksCurrentSampler *sampler, int16_t compare_tick)
 
 }
 
-bool lks_current_arm(LksCurrentSampler *sampler, uint32_t cycle, uint8_t sector,
-                     bool in_window, const CurrentCalibration *calibration)
+static bool arm_sample(LksCurrentSampler *sampler, uint32_t cycle, uint8_t sector,
+                       bool in_window, const CurrentCalibration *calibration,
+                       bool software_trigger)
 {
     static const uint8_t channels[CURRENT_PHASES] = {
         ADC_CHANNEL_2, ADC_CHANNEL_1, ADC_CHANNEL_0
@@ -124,10 +126,20 @@ bool lks_current_arm(LksCurrentSampler *sampler, uint32_t cycle, uint8_t sector,
                 return false;
             }
             ADC_CHN_GAIN_CFG(ADC0, CHN0, channels[phase], ADC_GAIN3V6);
-            ADC0->TRIG = ADC_TRIG_MCPWM0_T0;
+            if (software_trigger) {
+                ADC_SoftTrgEN(ADC0, ENABLE);
+            } else {
+                ADC0->TRIG = ADC_TRIG_MCPWM0_T0;
+            }
         }
     }
     return true;
+}
+
+bool lks_current_arm(LksCurrentSampler *sampler, uint32_t cycle, uint8_t sector,
+                     bool in_window, const CurrentCalibration *calibration)
+{
+    return arm_sample(sampler, cycle, sector, in_window, calibration, false);
 }
 
 bool lks_current_finish(LksCurrentSampler *sampler, uint32_t now_cycle,
@@ -171,4 +183,26 @@ bool lks_current_finish(LksCurrentSampler *sampler, uint32_t now_cycle,
     *frame = current_sample(&sampler->trigger, words, received, false, now_cycle, 1u);
     sampler->pending = false;
     return true;
+}
+
+bool lks_current_sample_stopped(LksCurrentSampler *sampler, uint8_t sector,
+                                const CurrentCalibration *calibration,
+                                CurrentSampleFrame *frame)
+{
+    uint32_t start;
+    bool ready = false;
+
+    if (sector >= 6u || !lks_current_recover(sampler) ||
+        !arm_sample(sampler, 0, sector, true, calibration, true)) {
+        return false;
+    }
+
+    start = bench_sixstep_clock();
+    while ((uint32_t)(bench_sixstep_clock() - start) < ADC_STATIC_TIMEOUT_TICKS) {
+        if (lks_current_close_if_ready(sampler)) {
+            ready = true;
+            break;
+        }
+    }
+    return lks_current_finish(sampler, 0, ready, frame);
 }

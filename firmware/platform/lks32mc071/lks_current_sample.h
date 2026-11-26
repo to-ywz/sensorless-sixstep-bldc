@@ -33,6 +33,12 @@ extern volatile LksCurrentDebug g_m3_adc_debug;
 LksCurrentPwmEvent lks_current_pwm_event(void);
 void lks_current_clear_pwm_events(void);
 void lks_current_cancel(LksCurrentSampler *sampler);
+/* Caller holds PWM outputs off. Sector selects the shunt via the six-step map.
+ * Static frames use pwm_cycle = 0 because software triggers the conversion.
+ */
+bool lks_current_sample_stopped(LksCurrentSampler *sampler, uint8_t sector,
+                                const CurrentCalibration *calibration,
+                                CurrentSampleFrame *frame);
 bool lks_current_recover(LksCurrentSampler *sampler);
 /* On completion or error, mask TADC0 and snapshot timing before Finish. */
 bool lks_current_close_if_ready(LksCurrentSampler *sampler);

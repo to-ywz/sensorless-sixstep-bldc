@@ -18,6 +18,8 @@ extern uint32_t MCPWM0_PRT, MCPWM0_TMR0, MCPWM0_UPDATE, MCPWM0_IF0, MCPWM0_CNT0;
 enum { ADC_CHANNEL_0, ADC_CHANNEL_1, ADC_CHANNEL_2 };
 enum { CHN0 = 0, DAT0 = 0, ADC_GAIN3V6 = 0 };
 
+enum { ENABLE = 1 };
+void ADC_SoftTrgEN(ADC_TypeDef *adc, int state);
 void ADC_Init(ADC_TypeDef *adc, ADC_InitTypeDef *config);
 void ADC_StructInit(ADC_InitTypeDef *config);
 void ADC_ClearIRQFlag(ADC_TypeDef *adc, uint16_t flags);

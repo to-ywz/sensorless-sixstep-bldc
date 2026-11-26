@@ -34,6 +34,17 @@ int bench_sixstep_output_apply_synced(uint32_t sector, uint32_t duty,
     return 1;
 }
 
+bool lks_current_sample_stopped(LksCurrentSampler *sampler, uint8_t sector,
+                                const CurrentCalibration *calibration,
+                                CurrentSampleFrame *frame)
+{
+    const uint16_t words[CURRENT_PHASES] = {0x0080, 0, 0};
+    CurrentTrigger trigger = current_trigger(0, sector, true, false, calibration);
+    assert(stopped && !sampler->pending);
+    *frame = current_sample(&trigger, words, trigger.phase_mask, false, 0, 0);
+    return true;
+}
+
 void lks_current_init(LksCurrentSampler *sampler, int16_t compare_tick)
 {
     assert(compare_tick == 0);
@@ -253,6 +264,24 @@ int main(void)
         assert(g_m3_pwm_debug.reason == BENCH_PWM_FINISH_ATTRIBUTION_LOST);
         assert(g_m3_pwm_debug.close_elapsed_ticks == 3200);
         puts("PASS: deadline applies to trigger closure, not frame publication");
+    }
+    assert(g_m3_running);
+    {
+        unsigned previous_arms = arms;
+        uint32_t frames = g_m3_frame_count;
+
+        g_m3_command = BENCH_CURRENT_STATIC;
+        g_m3_requested_sector = 3;
+        bench_current_poll();
+        assert(g_m3_running && g_m3_frame_count == frames);
+        g_m3_command = BENCH_CURRENT_STOP;
+        bench_current_poll();
+        g_m3_command = BENCH_CURRENT_STATIC;
+        bench_current_poll();
+        assert(stopped && !g_m3_running && arms == previous_arms);
+        assert(g_m3_frame_count == frames + 1 && g_m3_frame.pwm_cycle == 0);
+        assert(g_m3_frame.sector == 3 && g_m3_frame.raw_mask == 1);
+        puts("PASS: software-triggered static sample leaves PWM outputs off");
     }
     puts("PASS: incomplete and completed conversions retain old sector across restart");
     puts("PASS: physical STOP during finish and software STOP before finish suppress publication");

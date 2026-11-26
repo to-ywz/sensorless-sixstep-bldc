@@ -150,6 +150,20 @@ void bench_current_poll(void)
         return;
     }
 
+    if (command == BENCH_CURRENT_STATIC && !g_m3_running && request < 6u) {
+        CurrentSampleFrame frame;
+
+        bench_sixstep_output_stop();
+        g_m3_frame_current = false;
+        if (lks_current_sample_stopped(&sampler, (uint8_t)request, &calibration, &frame) &&
+            !bench_sixstep_stop_requested()) {
+            g_m3_frame = frame;
+            ++g_m3_frame_count;
+            g_m3_frame_current = true;
+        }
+        return;
+    }
+
     if (g_m3_running) {
         if ((uint32_t)(now - polled_at) >= CARRIER_TICKS) {
             /* A sticky PWM flag cannot tell us how many boundaries elapsed. */

@@ -7,7 +7,8 @@
  * For APPLY, write requested_sector first, then command. Resume to consume
  * the command once. STOP holds until a subsequent APPLY.
  */
-enum { BENCH_CURRENT_APPLY = 1, BENCH_CURRENT_STOP = 2 };
+/* STATIC samples the requested sector's shunt once while stopped. */
+enum { BENCH_CURRENT_APPLY = 1, BENCH_CURRENT_STOP = 2, BENCH_CURRENT_STATIC = 3 };
 extern volatile uint32_t g_m3_command, g_m3_requested_sector;
 extern volatile uint32_t g_m3_running, g_m3_frame_count, g_m3_timing_faults;
 /* Historical values are retained across STOP/restart. Treat them as current

@@ -9,7 +9,8 @@ static uint8_t selected_channel;
 static uint32_t data_reads;
 static uint32_t bus_tick, clear_at;
 static uint16_t adc_clear_mask;
-static bool stuck_flag;
+static bool stuck_flag, software_completes;
+static unsigned software_starts;
 
 uint32_t bench_sixstep_clock(void)
 {
@@ -25,6 +26,15 @@ void ADC_Init(ADC_TypeDef *adc, ADC_InitTypeDef *config)
 {
     assert(config->unused == 0);
     adc->TRIG = 0;
+}
+
+void ADC_SoftTrgEN(ADC_TypeDef *adc, int state)
+{
+    assert(state == ENABLE && adc->TRIG == 0 && adc->IF == 0);
+    ++software_starts;
+    if (software_completes) {
+        adc->IF = ADC_SF1_IF;
+    }
 }
 
 void ADC_StructInit(ADC_InitTypeDef *config)
@@ -165,10 +175,30 @@ static void test_pwm_adapter(void)
     assert(data_reads == 6 && mock_adc.TRIG == 0);
 }
 
+static void test_static_software_trigger(void)
+{
+    const CurrentCalibration cal = {0};
+    LksCurrentSampler sampler;
+    CurrentSampleFrame frame;
+
+    lks_current_init(&sampler, 0);
+    software_completes = true;
+    assert(lks_current_sample_stopped(&sampler, 3, &cal, &frame));
+    assert(software_starts == 1 && selected_channel == ADC_CHANNEL_2 && mock_adc.TRIG == 0);
+    assert(frame.pwm_cycle == 0 && frame.sector == 3 && frame.raw_mask == 1);
+    assert(frame.phase[0].raw == 100 && frame.phase[0].status == CURRENT_UNCALIBRATED);
+
+    software_completes = false;
+    assert(lks_current_sample_stopped(&sampler, 0, &cal, &frame));
+    assert(software_starts == 2 && mock_adc.TRIG == 0 && frame.raw_mask == 0);
+    assert(frame.phase[1].status == CURRENT_MISSING && !sampler.pending);
+}
+
 int main(void)
 {
     test_portable();
     test_pwm_adapter();
+    test_static_software_trigger();
     puts("M3 current sampling: ADC decode, calibrated frames and six-sector MCPWM adapter Mock PASS");
     return 0;
 }
