@@ -149,8 +149,20 @@ static void tick(uint32_t delta, int16_t count, bool boundary, bool compare)
 #endif
 }
 
+#ifdef BENCH_DEBUG_UART
+static uint32_t snapshot_epoch(void)
+{
+    DiagnosticSnapshot snapshot;
+    bench_current_snapshot(&snapshot);
+    return snapshot.frame_epoch;
+}
+#endif
+
 int main(void)
 {
+#ifdef BENCH_DEBUG_UART
+    uint32_t epoch;
+#endif
     const CurrentCalibration cal = {7, {{0, 1}, {0, 1}, {0, 1}}};
     clock_ticks = UINT32_MAX - 100;
     bench_current_init(&cal);
@@ -196,7 +208,13 @@ int main(void)
     assert(arms == 2);
     tick(50, -2301, false, false);
     startup_boundary = false;
+#ifdef BENCH_DEBUG_UART
+    epoch = snapshot_epoch();
+#endif
     apply(1);
+#ifdef BENCH_DEBUG_UART
+    assert(snapshot_epoch() == epoch + 1u);
+#endif
     assert(arms == 3 && g_m3_frame.sector == 0 && g_m3_frame.pwm_cycle == 2);
     assert(g_m3_frame.valid_mask == 0 && g_m3_frame.phase[1].status == CURRENT_MISSING);
     adc_ready = true;
@@ -207,8 +225,16 @@ int main(void)
     assert(arms == 4);
     adc_ready = true;
     inject_stop_on_finish = true;
+#ifdef BENCH_DEBUG_UART
+    epoch = snapshot_epoch();
+#endif
     tick(2511, 160, false, true);
     assert(stopped && !g_m3_running && !g_m3_frame_current && g_m3_frame_count == 3);
+#ifdef BENCH_DEBUG_UART
+    assert(snapshot_epoch() == epoch + 1u);
+    bench_current_poll(); /* Held physical STOP must not invalidate again. */
+    assert(snapshot_epoch() == epoch + 1u);
+#endif
     inject_stop_on_finish = brake = false;
     apply(2);
     assert(g_m3_running && arms == 5);
@@ -306,10 +332,19 @@ int main(void)
         g_m3_requested_sector = 3;
         bench_current_poll();
         assert(g_m3_running && g_m3_frame_count == frames);
+#ifdef BENCH_DEBUG_UART
+        epoch = snapshot_epoch();
+#endif
         g_m3_command = BENCH_CURRENT_STOP;
         bench_current_poll();
+#ifdef BENCH_DEBUG_UART
+        assert(snapshot_epoch() == epoch + 1u);
+#endif
         g_m3_command = BENCH_CURRENT_STATIC;
         bench_current_poll();
+#ifdef BENCH_DEBUG_UART
+        assert(snapshot_epoch() == epoch + 2u);
+#endif
         assert(stopped && !g_m3_running && arms == previous_arms);
         assert(g_m3_frame_count == frames + 1 && g_m3_frame.pwm_cycle == 0);
         assert(g_m3_frame.sector == 3 && g_m3_frame.raw_mask == 1);

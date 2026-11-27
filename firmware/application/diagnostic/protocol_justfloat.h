@@ -8,6 +8,7 @@ typedef struct {
     CurrentSampleFrame frame;
     uint32_t sample_count;
     uint32_t timing_faults;
+    uint32_t frame_epoch; /* Internal invalidation generation, omitted from wire format. */
     bool running;
     bool frame_current;
 } DiagnosticSnapshot;

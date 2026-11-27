@@ -27,11 +27,28 @@ static CurrentCalibration calibration;
 static uint32_t cycle, armed_at, polled_at;
 static uint8_t sector, requested_sector;
 static bool restarted;
+#ifdef BENCH_DEBUG_UART
+static uint32_t frame_epoch;
+#endif
+
+static void invalidate_frame(void)
+{
+    g_m3_frame_current = false;
+#ifdef BENCH_DEBUG_UART
+    ++frame_epoch;
+#endif
+}
 
 static void stop(void)
 {
     bench_sixstep_output_stop();
     lks_current_cancel(&sampler);
+#ifdef BENCH_DEBUG_UART
+    /* A held STOP against an already invalid, idle frame is idempotent. */
+    if (g_m3_running || g_m3_frame_current) {
+        ++frame_epoch;
+    }
+#endif
     g_m3_running = 0;
     g_m3_frame_current = false;
 }
@@ -133,7 +150,7 @@ void bench_current_init(const CurrentCalibration *board_calibration)
     g_m3_running = g_m3_frame_count = g_m3_timing_faults = 0;
     g_m3_frame = (CurrentSampleFrame){0};
     g_m3_pwm_debug = (BenchCurrentPwmDebug){0};
-    g_m3_frame_current = false;
+    invalidate_frame();
 }
 
 void bench_current_poll(void)
@@ -154,7 +171,7 @@ void bench_current_poll(void)
         CurrentSampleFrame frame;
 
         bench_sixstep_output_stop();
-        g_m3_frame_current = false;
+        invalidate_frame();
         if (lks_current_sample_stopped(&sampler, (uint8_t)request, &calibration, &frame) &&
             !bench_sixstep_stop_requested()) {
             g_m3_frame = frame;
@@ -208,7 +225,7 @@ void bench_current_poll(void)
                 return;
             }
         }
-        g_m3_frame_current = false;
+        invalidate_frame();
         requested_sector = (uint8_t)request;
         if (!bench_sixstep_output_apply_synced(request, BENCH_DUTY, prepare_restart)) {
             stop();
@@ -250,6 +267,7 @@ void bench_current_snapshot(DiagnosticSnapshot *snapshot)
     snapshot->frame = g_m3_frame;
     snapshot->sample_count = g_m3_frame_count;
     snapshot->timing_faults = g_m3_timing_faults;
+    snapshot->frame_epoch = frame_epoch;
     snapshot->running = g_m3_running != 0;
     snapshot->frame_current = g_m3_frame_current;
 }

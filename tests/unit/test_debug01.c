@@ -169,6 +169,41 @@ int main(void)
     assert(drain(bytes) == JUSTFLOAT_SIZE);
     assert(memcmp(bytes + 32, "\x00\x00\x00\x00\x00\x00\x00\x00", 8) == 0);
     assert(memcmp(bytes + 44, "\x00\x00\x00\x00", 4) == 0);
+    diagnostic_init(source, 1000);
+    snapshot.running = snapshot.frame_current = true;
+    snapshot.frame_epoch = UINT32_MAX;
+    now = 50;
+    diagnostic_poll(now);
+    diagnostic_poll(now); /* Stage the running/current frame. */
+    snapshot.running = snapshot.frame_current = false;
+    ++snapshot.frame_epoch; /* STOP, including epoch wrap. */
+    snapshot.running = snapshot.frame_current = true;
+    ++snapshot.frame_epoch; /* Restart and publish before the next diagnostic visit. */
+    for (i = 0; i < 50; ++i) {
+        diagnostic_poll(now);
+    }
+    assert(lks_uart_idle());
+
+    now += 50;
+    diagnostic_poll(now);
+    diagnostic_poll(now); /* Stage the next frame. */
+    ++snapshot.frame_epoch; /* Sector restart restores both flags before the next visit. */
+    for (i = 0; i < 50; ++i) {
+        diagnostic_poll(now);
+    }
+    assert(lks_uart_idle());
+
+    now += 50;
+    for (i = 0; i < 50; ++i) {
+        diagnostic_poll(now);
+    }
+    assert(!lks_uart_idle());
+    snapshot.running = snapshot.frame_current = false;
+    ++snapshot.frame_epoch;
+    assert(drain(bytes) == JUSTFLOAT_SIZE);
+    /* Admitted frames retain the flags captured before STOP. */
+    assert(memcmp(bytes + 32, "\x00\x00\x80\x3f\x00\x00\x80\x3f", 8) == 0);
+    puts("PASS: epoch rejects pre-enqueue STOP/restart and sector restart; queued history drains");
     puts("DEBUG-01 transport, protocol and diagnostic mode Mock PASS");
     return 0;
 }

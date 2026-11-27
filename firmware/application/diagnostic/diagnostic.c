@@ -195,8 +195,11 @@ void diagnostic_poll(uint32_t ticks)
         ++stage;
     } else {
         source(&latest);
-        /* Abort a staged current snapshot invalidated by stop or restart. */
-        if (latest.running == snapshot.running &&
+        /* Only records still being encoded can be canceled. A STOP or
+         * restart can restore the same flags before this step runs.
+         */
+        if (latest.frame_epoch == snapshot.frame_epoch &&
+            latest.running == snapshot.running &&
             latest.frame_current == snapshot.frame_current) {
             static const uint8_t tail[] = {0, 0, 0x80, 0x7f};
             memcpy(&frame[JUSTFLOAT_SIZE - sizeof tail], tail, sizeof tail);
