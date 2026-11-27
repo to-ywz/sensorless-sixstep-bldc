@@ -8,6 +8,7 @@
 
 - M3 Bench 可选启用 UART0 诊断，提供非阻塞整帧发送、16 通道 JustFloat-M3/1 和只读文本命令。默认通信 115200、8N1、20 Hz。
 - 增加可选 3 Mbps 实验档。115200 双向串口和 VOFA+ 显示通过。3 Mbps 在 PWM 停止时通过 15 秒 20 Hz 遥测、命令往返及模式恢复。
+- 最终修订加入内部失效代次，跨 STOP 或换相重启的在编码快照于入队前丢弃，整帧入队后按历史快照送出。3 Mbps 修订版在 PWM 停止时复验通过，5 秒校验 101 帧。
 - 主机专项与 Keil 离线构建通过。默认全量 Mock 仍受既有 `config_valid` 断言阻塞；运行时采样时序和 STOP 延迟待测。[接口与验收记录](firmware/application/diagnostic/README.md)
 
 ### Milestone / documentation（2026-11-21）
