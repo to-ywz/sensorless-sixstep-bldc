@@ -4,6 +4,14 @@
 #include "../../firmware/platform/lks32mc071/bench_sixstep_output.h"
 #include "../../firmware/platform/lks32mc071/lks_current_sample.h"
 
+#ifdef BENCH_DEBUG_UART
+#include "lks32mc07x_lib.h"
+#include "../../firmware/platform/lks32mc071/lks_uart.h"
+#include "../../firmware/application/diagnostic/diagnostic.h"
+
+MockUart mock_uart;
+#endif
+
 static uint32_t clock_ticks, restart_prepare_ticks;
 static uint32_t close_delay_ticks, finish_entry_ticks, publish_delay_ticks;
 static unsigned arms;
@@ -134,6 +142,11 @@ static void tick(uint32_t delta, int16_t count, bool boundary, bool compare)
     clock_ticks += delta;
     event = (LksCurrentPwmEvent){count, boundary, compare};
     bench_current_poll();
+#ifdef BENCH_DEBUG_UART
+    if (bench_current_diagnostic_slot()) {
+        diagnostic_poll(bench_sixstep_clock());
+    }
+#endif
 }
 
 int main(void)
@@ -141,6 +154,16 @@ int main(void)
     const CurrentCalibration cal = {7, {{0, 1}, {0, 1}, {0, 1}}};
     clock_ticks = UINT32_MAX - 100;
     bench_current_init(&cal);
+#ifdef BENCH_DEBUG_UART
+    {
+        /* Hold TX completion throughout the real bench state-machine regression. */
+        const uint8_t congestion[255] = {0};
+        lks_uart_init();
+        assert(lks_uart_send(congestion, sizeof congestion));
+        assert(!lks_uart_send(congestion, 2));
+        diagnostic_init(bench_current_snapshot, 1000);
+    }
+#endif
     assert(stopped && g_m3_running == 0 && g_m3_frame_count == 0);
     startup_boundary = false;
     apply(0);
@@ -154,6 +177,15 @@ int main(void)
     tick(2480, 160, false, true);
     assert(g_m3_frame.pwm_cycle == 1 && g_m3_frame.sector == 0);
     assert(g_m3_frame.valid_mask == 2 && g_m3_frame.calibration_version == 7);
+#ifdef BENCH_DEBUG_UART
+    {
+        DiagnosticSnapshot observed;
+        assert(bench_current_diagnostic_slot());
+        bench_current_snapshot(&observed);
+        assert(observed.running && observed.frame_current && observed.frame.valid_mask == 2);
+        assert(observed.frame.calibration_version == 7 && observed.frame.pwm_cycle == 1);
+    }
+#endif
     assert(g_m3_pwm_debug.finish_count == 1 && g_m3_pwm_debug.pwm_cycle == 1);
     assert(g_m3_pwm_debug.counter_tick == 160 && g_m3_pwm_debug.elapsed_ticks == 2560);
     assert(!g_m3_pwm_debug.boundary && g_m3_pwm_debug.compare);
@@ -283,6 +315,19 @@ int main(void)
         assert(g_m3_frame.sector == 3 && g_m3_frame.raw_mask == 1);
         puts("PASS: software-triggered static sample leaves PWM outputs off");
     }
+#ifdef BENCH_DEBUG_UART
+    {
+        unsigned i;
+        uint32_t dropped = lks_uart_stats().tx_dropped;
+        uint32_t frames = g_m3_frame_count;
+        for (i = 0; i < 60; ++i) {
+            tick(1, 0, false, false);
+        }
+        assert(lks_uart_stats().tx_dropped > dropped);
+        assert(stopped && !g_m3_running && frames == g_m3_frame_count);
+        puts("PASS: full UART TX drops telemetry and leaves stopped sample unchanged");
+    }
+#endif
     puts("PASS: incomplete and completed conversions retain old sector across restart");
     puts("PASS: physical STOP during finish and software STOP before finish suppress publication");
     puts("M3 Bench: first PWM cycle, wrap, commutation, duplicate event and STOP Mock PASS");

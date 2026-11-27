@@ -201,8 +201,15 @@ void CMP_IRQHandler(void)
  -----------------------------------------------------------------------------
  2020/8/5      V1.0           Howlet Li          ´´½¨
  *******************************************************************************/
+#ifdef BENCH_DEBUG_UART
+#include "../../../../platform/lks32mc071/lks_uart.h"
+#endif
 void UART0_IRQHandler(void)
 {
+#ifdef BENCH_DEBUG_UART
+    lks_uart_irq();
+#endif
+
   
 }
 

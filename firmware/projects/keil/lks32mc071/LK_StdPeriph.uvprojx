@@ -436,6 +436,26 @@
               <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
             </File>
             <File>
+              <FileName>diagnostic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\diagnostic\diagnostic.c</FilePath>
+            </File>
+            <File>
+              <FileName>protocol_text.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\diagnostic\protocol_text.c</FilePath>
+            </File>
+            <File>
+              <FileName>protocol_justfloat.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\diagnostic\protocol_justfloat.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks_uart.c</FilePath>
+            </File>
+            <File>
               <FileName>current_sample.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\motor\current\current_sample.c</FilePath>
@@ -1024,6 +1044,26 @@
               <FileName>sixstep_table.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\motor\commutation\sixstep_table.c</FilePath>
+            </File>
+            <File>
+              <FileName>diagnostic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\diagnostic\diagnostic.c</FilePath>
+            </File>
+            <File>
+              <FileName>protocol_text.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\diagnostic\protocol_text.c</FilePath>
+            </File>
+            <File>
+              <FileName>protocol_justfloat.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\application\diagnostic\protocol_justfloat.c</FilePath>
+            </File>
+            <File>
+              <FileName>lks_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\platform\lks32mc071\lks_uart.c</FilePath>
             </File>
             <File>
               <FileName>current_sample.c</FileName>

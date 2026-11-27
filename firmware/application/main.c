@@ -27,6 +27,11 @@
 #include "../tests/bench_cmp_fail/bench_cmp_fail.h"
 #elif defined(BENCH_TEST_CURRENT_SAMPLE)
 #include "../tests/bench_current/bench_current.h"
+#ifdef BENCH_DEBUG_UART
+#include "diagnostic/diagnostic.h"
+#include "../platform/lks32mc071/bench_sixstep_output.h"
+#include "../platform/lks32mc071/lks_uart.h"
+#endif
 #elif defined(BENCH_TEST_GATE_DRIVER)
 #include "test_gate_driver.h"
 #elif defined(BENCH_TEST_SIXSTEP_LOGIC)
@@ -52,6 +57,10 @@ static void bench_delay(volatile uint32_t iterations)
 
 #endif
 
+#if defined(BENCH_DEBUG_UART) && !defined(BENCH_TEST_CURRENT_SAMPLE)
+#error "BENCH_DEBUG_UART requires BENCH_TEST_CURRENT_SAMPLE"
+#endif
+
 int main(void)
 {
     board_init_safe();
@@ -61,7 +70,18 @@ int main(void)
     for (;;) { bench_cmp_fail_poll(); }
 #elif defined(BENCH_TEST_CURRENT_SAMPLE)
     bench_current_init(0);
-    for (;;) { bench_current_poll(); }
+#ifdef BENCH_DEBUG_UART
+    lks_uart_init();
+    diagnostic_init(bench_current_snapshot, bench_sixstep_ticks_per_ms() * 1000u);
+#endif
+    for (;;) {
+        bench_current_poll();
+#ifdef BENCH_DEBUG_UART
+        if (bench_current_diagnostic_slot()) {
+            diagnostic_poll(bench_sixstep_clock());
+        }
+#endif
+    }
 #elif defined(BENCH_TEST_GATE_DRIVER)
     bench_gate_driver_init();
     for (;;) {

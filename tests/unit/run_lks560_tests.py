@@ -10,7 +10,10 @@ from check_protection_gates import check as check_protection_gates
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cc', default='gcc', help='Host C99 GCC-compatible compiler')
-parser.add_argument('--current-only', action='store_true', help='Run only M3 current sampling Mock')
+suite = parser.add_mutually_exclusive_group()
+suite.add_argument('--current-only', action='store_true', help='Run only M3 current sampling Mock')
+suite.add_argument('--diagnostic-only', action='store_true', help='Run DEBUG-01 transport and M3 integration Mock')
+suite.add_argument('--outputs-only', action='store_true', help='Run independent A0-A4 output Mock')
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 platform = 'firmware/platform/lks32mc071'
@@ -18,7 +21,7 @@ board = 'firmware/board/lks_evb_mvpowpre'
 bench = 'firmware/tests/bench'
 model = 'firmware/motor/commutation'
 protection = 'firmware/application/protection'
-if not args.current_only:
+if not (args.current_only or args.diagnostic_only or args.outputs_only):
     check_protection_gates(root)
 cases = [
     ('current', ['tests/unit/current_fakes', platform],
@@ -41,12 +44,27 @@ cases = [
       model+'/sixstep_table.c'] +
      [bench+'/test_mcpwm_'+name+'.c' for name in ['single', 'complementary', 'three_pair']]),
 ]
+diagnostic = 'firmware/application/diagnostic'
+diagnostic_sources = [platform+'/lks_uart.c'] + [
+    diagnostic+'/'+name for name in ('diagnostic.c', 'protocol_justfloat.c', 'protocol_text.c')]
+cases += [
+    ('uart', ['tests/unit/uart_fakes'], ['tests/unit/test_debug01.c'] + diagnostic_sources),
+    ('uart-3m', ['tests/unit/uart_fakes'], ['tests/unit/test_debug01.c'] + diagnostic_sources),
+    ('uart-bench', ['tests/unit/uart_fakes'], cases[1][2] + diagnostic_sources),
+]
 with tempfile.TemporaryDirectory(prefix='lks560-tests-') as temp:
     for name, includes, sources in cases:
         if args.current_only and not name.startswith('current'):
             continue
+        if args.diagnostic_only and not name.startswith('uart'):
+            continue
+        if args.outputs_only and name not in ('table', 'bench', 'lks560'):
+            continue
+        defines = ['-DBENCH_DEBUG_UART'] if name.startswith('uart') else []
+        if name == 'uart-3m':
+            defines.append('-DBENCH_DEBUG_UART_3M_EXPERIMENTAL')
         exe = str(Path(temp)/(name+'.exe'))
-        subprocess.run([args.cc, '-std=c99', '-Wall', '-Wextra', '-Werror']+
+        subprocess.run([args.cc, '-std=c99', '-Wall', '-Wextra', '-Werror']+defines+
                        ['-I'+str(root/p) for p in includes]+
                        [str(root/p) for p in sources]+['-o', exe], check=True)
         if name == 'protection':

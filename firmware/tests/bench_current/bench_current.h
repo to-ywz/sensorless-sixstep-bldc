@@ -41,4 +41,10 @@ extern volatile BenchCurrentPwmDebug g_m3_pwm_debug;
 void bench_current_init(const CurrentCalibration *board_calibration);
 void bench_current_poll(void);
 
+#ifdef BENCH_DEBUG_UART
+#include "../../application/diagnostic/protocol_justfloat.h"
+void bench_current_snapshot(DiagnosticSnapshot *snapshot);
+bool bench_current_diagnostic_slot(void);
+#endif
+
 #endif

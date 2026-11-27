@@ -240,3 +240,32 @@ void bench_current_poll(void)
         publish_missing();
     }
 }
+
+#ifdef BENCH_DEBUG_UART
+#include "../../application/diagnostic/diagnostic.h"
+
+void bench_current_snapshot(DiagnosticSnapshot *snapshot)
+{
+    /* The bench writes all fields in foreground. UART IRQ never accesses them. */
+    snapshot->frame = g_m3_frame;
+    snapshot->sample_count = g_m3_frame_count;
+    snapshot->timing_faults = g_m3_timing_faults;
+    snapshot->running = g_m3_running != 0;
+    snapshot->frame_current = g_m3_frame_current;
+}
+
+bool bench_current_diagnostic_slot(void)
+{
+    if (!g_m3_running) {
+        return true;
+    }
+    if (!sampler.pending) {
+        LksCurrentPwmEvent event = lks_current_pwm_event();
+        /* After finish, reserve at least 1400 clock ticks before wrap.
+         * This is a scheduling guard. WCET and UART IRQ jitter need measurement.
+         */
+        return !event.boundary && event.tick >= 0 && event.tick <= 1000;
+    }
+    return false;
+}
+#endif
