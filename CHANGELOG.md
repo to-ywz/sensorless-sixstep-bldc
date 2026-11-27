@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### DEBUG-01 UART / JustFloat（2026-11-27）
+
+- M3 Bench 可选启用 UART0 诊断，提供非阻塞整帧发送、16 通道 JustFloat-M3/1 和只读文本命令。默认通信 115200、8N1、20 Hz。
+- 增加可选 3 Mbps 实验档。115200 双向串口和 VOFA+ 显示通过。3 Mbps 在 PWM 停止时通过 15 秒 20 Hz 遥测、命令往返及模式恢复。
+- 主机专项与 Keil 离线构建通过。默认全量 Mock 仍受既有 `config_valid` 断言阻塞；运行时采样时序和 STOP 延迟待测。[接口与验收记录](firmware/application/diagnostic/README.md)
+
 ### Milestone / documentation（2026-11-21）
 - 按用户确认关闭M2核心功能，复用外部CMP1→FAIL1、六路安全态、H1功能关断、H2保持、S1锁存及R1正常显式恢复证据；不把范围调整写成原R1全部判据实测PASS。
 - H1最坏响应延迟及最小可检测故障脉宽转后续性能优化backlog；故障态复位记WAIVED_BY_USER / NOT VERIFIED，不重复安排。
